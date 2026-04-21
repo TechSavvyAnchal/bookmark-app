@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, PieChart, LogOut, Bookmark, Folder, Chrome, Shield } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -20,7 +20,13 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-white/80 dark:bg-[#0F172A]/80 backdrop-blur-2xl flex flex-col h-full border-r border-white/50 dark:border-white/5 transition-all duration-500 shadow-2xl shadow-indigo-500/5">
+    <aside className={`
+      fixed inset-y-0 left-0 z-50 w-72 lg:static lg:translate-x-0
+      bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-2xl flex flex-col h-full 
+      border-r border-white/50 dark:border-white/5 transition-all duration-500 
+      shadow-2xl shadow-indigo-500/5
+      ${isOpen ? "translate-x-0" : "-translate-x-full"}
+    `}>
       {/* Logo Area */}
       <div className="h-24 flex items-center justify-between px-8">
         <div className="flex items-center gap-3">
@@ -41,6 +47,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               to={item.path}
+              onClick={() => onClose && onClose()}
               className={`flex items-center px-5 py-3.5 rounded-2xl transition-all duration-300 group ${
                 isActive
                   ? "bg-indigo-600 text-white shadow-xl shadow-indigo-500/30 scale-[1.02]"

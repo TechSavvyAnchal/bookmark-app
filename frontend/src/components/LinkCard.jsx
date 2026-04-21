@@ -166,7 +166,7 @@ export default function LinkCard({ bookmark, onDelete, onUpdate, viewMode = "gri
 
   // --- ACTIONS COMPONENT ---
   const ActionButtons = () => (
-    <div className="flex items-center gap-0.5 bg-white/80 dark:bg-black/60 p-1 rounded-xl border border-white/50 dark:border-white/10 shadow-lg backdrop-blur-md opacity-0 scale-95 translate-x-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-x-0 transition-all duration-300 ease-out pointer-events-none group-hover:pointer-events-auto">
+    <div className="flex items-center gap-0.5 bg-white/90 dark:bg-black/80 p-1 rounded-xl border border-white/50 dark:border-white/10 shadow-lg backdrop-blur-md opacity-100 lg:opacity-0 lg:scale-95 lg:translate-x-2 lg:group-hover:opacity-100 lg:group-hover:scale-100 lg:group-hover:translate-x-0 transition-all duration-300 ease-out pointer-events-auto">
       <button 
         onClick={togglePin} 
         className={`p-1.5 rounded-lg transition-all ${bookmark.isPinned ? 'bg-amber-100 text-amber-600' : 'text-gray-400 hover:bg-amber-50 hover:text-amber-500'}`}
@@ -201,10 +201,10 @@ export default function LinkCard({ bookmark, onDelete, onUpdate, viewMode = "gri
         custom={index}
         whileHover={{ x: 8, backgroundColor: "rgba(99, 102, 241, 0.08)" }}
         transition={resetTransition}
-        className="group relative flex items-center justify-between bg-white/60 dark:bg-white/5 backdrop-blur-xl p-4 rounded-[2rem] border border-white/50 dark:border-white/10 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all overflow-hidden"
+        className="group relative flex flex-col sm:flex-row sm:items-center justify-between bg-white/60 dark:bg-white/5 backdrop-blur-xl p-4 md:p-5 rounded-[1.5rem] md:rounded-[2rem] border border-white/50 dark:border-white/10 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all overflow-hidden gap-3"
       >
-        <div className="flex items-center gap-5 flex-grow min-w-0 pr-4">
-          <div className="w-10 h-10 bg-white/80 dark:bg-white/10 rounded-2xl flex items-center justify-center shrink-0 shadow-inner border border-white/50 dark:border-white/10">
+        <div className="flex items-center gap-3 md:gap-5 flex-grow min-w-0">
+          <div className="w-10 h-10 bg-white/80 dark:bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 shadow-inner border border-white/50 dark:border-white/10">
             {!faviconError ? (
               <img src={faviconUrl} alt="icon" className="w-5 h-5 object-contain rounded-sm" onError={() => setFaviconError(true)} />
             ) : (
@@ -212,17 +212,17 @@ export default function LinkCard({ bookmark, onDelete, onUpdate, viewMode = "gri
             )}
           </div>
           <div className="min-w-0 flex-grow">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
               <a href={bookmark.url} target="_blank" rel="noreferrer" className="text-sm font-black text-gray-900 dark:text-gray-100 truncate hover:text-indigo-600 transition-colors tracking-tight">
                 {bookmark.title}
               </a>
-              <span className={`px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${getCategoryColor(bookmark.category)}`}>
+              <span className={`w-fit px-2 py-0.5 rounded-lg border text-[8px] font-black uppercase tracking-widest ${getCategoryColor(bookmark.category)}`}>
                 {bookmark.category}
               </span>
             </div>
           </div>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex justify-end">
           <ActionButtons />
         </div>
         <ReaderModal isOpen={isReaderOpen} onClose={() => setIsReaderOpen(false)} content={readerContent} />
@@ -241,14 +241,14 @@ export default function LinkCard({ bookmark, onDelete, onUpdate, viewMode = "gri
       custom={index}
       whileHover={hoverEffect}
       transition={resetTransition}
-      className={`group relative bg-white/40 dark:bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-6 shadow-xl shadow-indigo-500/5 border border-white/60 dark:border-white/10 flex flex-col h-full min-h-[400px] transition-all overflow-hidden ${bookmark.isPinned ? "ring-2 ring-indigo-500/30" : ""}`}
+      className={`group relative bg-white/40 dark:bg-white/5 backdrop-blur-2xl rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-6 shadow-xl shadow-indigo-500/5 border border-white/60 dark:border-white/10 flex flex-col h-full min-h-[380px] md:min-h-[400px] transition-all overflow-hidden ${bookmark.isPinned ? "ring-2 ring-indigo-500/30" : ""}`}
     >
-      <div className="flex items-start justify-between mb-6 gap-2">
-        <div className="w-12 h-12 bg-white/80 dark:bg-white/10 rounded-[1.25rem] flex items-center justify-center shrink-0 shadow-lg border border-white/50 dark:border-white/10">
+      <div className="flex items-start justify-between mb-4 md:mb-6 gap-2">
+        <div className="w-10 h-10 md:w-12 md:h-12 bg-white/80 dark:bg-white/10 rounded-xl md:rounded-[1.25rem] flex items-center justify-center shrink-0 shadow-lg border border-white/50 dark:border-white/10">
           {!faviconError ? (
-            <img src={faviconUrl} alt="icon" className="w-7 h-7 object-contain rounded-md" onError={() => setFaviconError(true)} />
+            <img src={faviconUrl} alt="icon" className="w-6 h-6 md:w-7 md:h-7 object-contain rounded-md" onError={() => setFaviconError(true)} />
           ) : (
-            <Globe className="w-7 h-7 text-gray-400" />
+            <Globe className="w-6 h-6 md:w-7 md:h-7 text-gray-400" />
           )}
         </div>
         <div className="flex-shrink-0">
@@ -256,47 +256,42 @@ export default function LinkCard({ bookmark, onDelete, onUpdate, viewMode = "gri
         </div>
       </div>
 
-      <div className="mb-5">
-        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 mb-2 hover:opacity-70 transition-opacity">
-          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">{domain}</span>
-          <ArrowUpRight className="w-3.5 h-3.5 text-indigo-300" />
+      <div className="mb-4 md:mb-5">
+        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 mb-1.5 md:mb-2 hover:opacity-70 transition-opacity">
+          <span className="text-[9px] md:text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] truncate max-w-[150px]">{domain}</span>
+          <ArrowUpRight className="w-3 h-3 md:w-3.5 md:h-3.5 text-indigo-300" />
         </a>
-        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block pr-8">
-          <h3 className="text-2xl font-[900] text-gray-900 dark:text-gray-100 leading-[1.1] tracking-tight group-hover:text-indigo-600 transition-colors line-clamp-2">
+        <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="block pr-4 md:pr-8">
+          <h3 className="text-xl md:text-2xl font-[900] text-gray-900 dark:text-gray-100 leading-[1.1] tracking-tight group-hover:text-indigo-600 transition-colors line-clamp-2">
             {bookmark.title}
           </h3>
         </a>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-1.5 md:gap-2 mb-4 md:mb-6">
         {bookmark.tags?.slice(0, 3).map(tag => (
-          <span key={tag} className="px-3.5 py-1.5 bg-indigo-500/5 backdrop-blur-md text-[9px] font-black text-indigo-600 dark:text-indigo-300 rounded-xl border border-indigo-500/10 shadow-sm uppercase tracking-widest">
+          <span key={tag} className="px-2.5 md:px-3.5 py-1 md:py-1.5 bg-indigo-500/5 backdrop-blur-md text-[8px] md:text-[9px] font-black text-indigo-600 dark:text-indigo-300 rounded-lg md:rounded-xl border border-indigo-500/10 shadow-sm uppercase tracking-widest">
             #{tag}
           </span>
         ))}
       </div>
 
-      <div className="flex-grow bg-white/40 dark:bg-white/5 backdrop-blur-sm rounded-[2rem] p-5 border border-indigo-500/5 mb-6 max-h-[160px] overflow-hidden relative shadow-inner">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
-          <span className="text-[10px] font-black uppercase text-indigo-600/40 dark:text-indigo-400/40 tracking-[0.3em]">AI Synthesis</span>
+      <div className="flex-grow bg-white/40 dark:bg-white/5 backdrop-blur-sm rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 border border-indigo-500/5 mb-4 md:mb-6 max-h-[140px] md:max-h-[160px] overflow-hidden relative shadow-inner">
+        <div className="flex items-center gap-2 mb-2 md:mb-3">
+          <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-500 animate-pulse" />
+          <span className="text-[9px] md:text-[10px] font-black uppercase text-indigo-600/40 dark:text-indigo-400/40 tracking-[0.3em]">AI Synthesis</span>
         </div>
-        <p className="text-[14px] text-gray-600 dark:text-gray-300 leading-relaxed font-semibold italic line-clamp-4">
+        <p className="text-xs md:text-[14px] text-gray-600 dark:text-gray-300 leading-relaxed font-semibold italic line-clamp-3 md:line-clamp-4">
           "{bookmark.summary}"
         </p>
-        {bookmark.note && (
-          <div className="mt-4 pt-4 border-t border-indigo-500/10 text-[11px] text-indigo-600 dark:text-indigo-400 font-black truncate uppercase tracking-tight">
-            <span className="opacity-40 mr-2">Note:</span> {bookmark.note}
-          </div>
-        )}
       </div>
 
-      <div className="flex items-center justify-between mt-auto pt-5 border-t border-indigo-500/5">
-        <div className={`px-4 py-2 rounded-2xl border text-[10px] font-[900] uppercase tracking-[0.15em] shadow-sm transition-all ${getCategoryColor(bookmark.category)}`}>
+      <div className="flex items-center justify-between mt-auto pt-4 md:pt-5 border-t border-indigo-500/5">
+        <div className={`px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-2xl border text-[9px] md:text-[10px] font-[900] uppercase tracking-[0.15em] shadow-sm transition-all ${getCategoryColor(bookmark.category)}`}>
           {bookmark.category}
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-[900] uppercase tracking-widest opacity-80">
-          <Clock className="w-4 h-4" />
+        <div className="flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] text-gray-400 font-[900] uppercase tracking-widest opacity-80">
+          <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
           {bookmark.readTime}m read
         </div>
       </div>
