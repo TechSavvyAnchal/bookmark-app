@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "AI Bookmark Saver",
+  "version": "1.0",
+  "description": "Save links to your AI Bookmarking App with one click.",
+  "permissions": ["activeTab", "storage"],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

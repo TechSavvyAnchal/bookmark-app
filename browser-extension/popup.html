@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+    body {
+      width: 320px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+    }
+    .header {
+      display: flex;
+      items-center: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    h2 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      color: var(--text-light);
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      box-sizing: border-box;
+      outline: none;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    textarea {
+      height: 80px;
+      resize: none;
+    }
+    .token-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 5px;
+    }
+    .change-token-btn {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .change-token-btn:hover {
+      text-decoration: underline;
+    }
+    button#save-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+    button#save-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    }
+    button#save-btn:active {
+      transform: translateY(0);
+    }
+    button#save-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    #status {
+      margin-top: 15px;
+      font-size: 12px;
+      text-align: center;
+      font-weight: 500;
+    }
+    .success { color: #059669; }
+    .error { color: #dc2626; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-icon">B</div>
+      <h2>AI Bookmarks</h2>
+    </div>
+  </div>
+  
+  <div class="form-group">
+    <label>Title</label>
+    <input type="text" id="title" placeholder="Loading title..." />
+  </div>
+  
+  <div class="form-group">
+    <label>URL</label>
+    <input type="text" id="url" readonly style="background: #f1f5f9; cursor: not-allowed;" />
+  </div>
+
+  <div class="form-group">
+    <label>Quick Note</label>
+    <textarea id="note" placeholder="Add a context for the AI..."></textarea>
+  </div>
+
+  <div class="form-group" id="token-group">
+    <label>Auth Token</label>
+    <input type="password" id="token" placeholder="Paste your Access Token" />
+  </div>
+
+  <div class="form-group hidden" id="token-status-group">
+    <div class="token-display">
+      <span>Authenticated ✓</span>
+      <span class="change-token-btn" id="change-token-link">Change Token</span>
+    </div>
+  </div>
+  
+  <button id="save-btn">Save to AI Bookmarks</button>
+  
+  <div id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
