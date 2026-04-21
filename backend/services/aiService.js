@@ -121,60 +121,66 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
   if (!process.env.GEMINI_API_KEY) return { summary: "No Key", category: "General", tags: [], embedding: [] };
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"];
+  
+  let lastError = null;
 
-  try {
-    const prompt = `Analyze this bookmark and respond ONLY with a JSON object containing: 
-    1. "summary": A concise 2-sentence summary.
-    2. "category": A single word category (e.g., Tech, Design, Productivity, News, Entertainment, Education).
-    3. "tags": An array of 3 relevant short tags.
-    4. "readTime": Estimated reading time in minutes (NUMBER ONLY, e.g., 5).
-    
-    URL: ${url}
-    Title: ${title}
-    Note: ${note}
-    Metadata: ${metadata.pageTitle}`;
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`[AI SERVICE] Attempting analysis with model: ${modelName}`);
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-    const result = await model.generateContent(prompt);
-    let text = result.response.text().trim();
-    console.log("[AI SERVICE] Raw Response:", text);
-    
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start === -1 || end === -1) throw new Error("No JSON found");
-    
-    const aiResponse = JSON.parse(text.substring(start, end + 1));
-    
-    // Defensive parsing for readTime
-    let readTime = parseInt(aiResponse.readTime);
-    if (isNaN(readTime)) readTime = 2;
+      const prompt = `Analyze this bookmark and respond ONLY with a JSON object containing: 
+      1. "summary": A concise 2-sentence summary.
+      2. "category": A single word category (e.g., Tech, Design, Productivity, News, Entertainment, Education).
+      3. "tags": An array of 3 relevant short tags.
+      4. "readTime": Estimated reading time in minutes (NUMBER ONLY, e.g., 5).
+      
+      URL: ${url}
+      Title: ${title}
+      Note: ${note}
+      Metadata: ${metadata.pageTitle}`;
 
-    const category = manualCategory || aiResponse.category || "General";
-    const embeddingText = `Title: ${title} | Category: ${category} | Summary: ${aiResponse.summary} | Tags: ${aiResponse.tags?.join(", ")} | Note: ${note} | Description: ${metadata.pageDescription}`;
-    const embedding = await generateEmbedding(embeddingText);
+      const result = await model.generateContent(prompt);
+      let text = result.response.text().trim();
+      
+      const start = text.indexOf("{");
+      const end = text.lastIndexOf("}");
+      if (start === -1 || end === -1) throw new Error("No JSON found");
+      
+      const aiResponse = JSON.parse(text.substring(start, end + 1));
+      
+      let readTime = parseInt(aiResponse.readTime);
+      if (isNaN(readTime)) readTime = 2;
 
-    return { 
-      summary: aiResponse.summary || "No summary", 
-      category, 
-      tags: aiResponse.tags || [], 
-      readTime, 
-      embedding 
-    };
-  } catch (err) {
-    console.error("[AI SERVICE] Analysis Error Details:", {
-      message: err.message,
-      stack: err.stack,
-      url,
-      title
-    });
-    return { 
-      summary: "AI Analysis failed", 
-      category: manualCategory || "General", 
-      tags: [], 
-      readTime: 2, 
-      embedding: [] 
-    };
+      const category = manualCategory || aiResponse.category || "General";
+      const embeddingText = `Title: ${title} | Category: ${category} | Summary: ${aiResponse.summary} | Tags: ${aiResponse.tags?.join(", ")} | Note: ${note} | Description: ${metadata.pageDescription}`;
+      const embedding = await generateEmbedding(embeddingText);
+
+      console.log(`[AI SERVICE] Analysis successful with ${modelName}`);
+      return { 
+        summary: aiResponse.summary || "No summary", 
+        category, 
+        tags: aiResponse.tags || [], 
+        readTime, 
+        embedding 
+      };
+    } catch (err) {
+      console.error(`[AI SERVICE] Model ${modelName} failed:`, err.message);
+      lastError = err;
+      continue; // Try next model
+    }
   }
+
+  // If all models fail
+  console.error("[AI SERVICE] All analysis models failed.", lastError?.message);
+  return { 
+    summary: "AI Analysis currently unavailable (Service Busy)", 
+    category: manualCategory || "General", 
+    tags: [], 
+    readTime: 2, 
+    embedding: [] 
+  };
 };
 
 const chatWithBookmarks = async (question, bookmarks) => {
