@@ -60,7 +60,7 @@ const fetchReaderContent = async (url) => {
 
 const generateQuiz = async (url, title, textContent) => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `Based on the following content from "${title}" (${url}), generate a 3-question multiple choice quiz to test comprehension.
   
@@ -121,7 +121,7 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
   if (!process.env.GEMINI_API_KEY) return { summary: "No Key", category: "General", tags: [], embedding: [] };
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   try {
     const prompt = `Analyze this bookmark and respond ONLY with a JSON object containing: 
