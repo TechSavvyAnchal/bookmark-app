@@ -108,23 +108,48 @@ router.post("/", auth, validate(createLinkSchema), async (req, res) => {
     const { url, title, category, note, vault } = req.body;
     console.log(`[LINK] Creating link for user ${req.user.id}: ${url}`);
 
-    let ai;
-    try {
-      ai = await analyzeLink(url, title, category, note);
-    } catch (aiErr) {
-      console.error("[LINK] AI Analysis failed:", aiErr.message);
-      ai = { summary: "AI Analysis failed", category: category || "General", tags: [], readTime: 2, embedding: [] };
-    }
-    
+    // 1. Create link with placeholder data immediately
     const link = await Link.create({
       ...req.body,
-      ...ai,
+      summary: "AI is analyzing this content...",
+      category: category || "General",
+      tags: [],
+      readTime: 1,
+      embedding: [],
       user: req.user.id,
       vault: vault || undefined
     });
 
-    console.log(`[LINK] Successfully created link: ${link._id}`);
-    
+    // 2. Respond immediately to the frontend
+    res.send(link);
+
+    // 3. Run AI Analysis in the background
+    (async () => {
+      try {
+        console.log(`[LINK] Starting background AI analysis for: ${link._id}`);
+        const ai = await analyzeLink(url, title, category, note);
+        
+        const updatedLink = await Link.findByIdAndUpdate(
+          link._id, 
+          { ...ai }, 
+          { new: true }
+        );
+
+        // 4. Emit update via Socket.io so the frontend updates automatically
+        const io = req.app.get("io");
+        if (io) {
+          if (updatedLink.vault) {
+            io.to(`vault_${updatedLink.vault}`).emit("linkUpdate", { action: "update", link: updatedLink });
+          } else {
+            io.to(`user_${req.user.id}`).emit("linkUpdate", { action: "update", link: updatedLink });
+          }
+        }
+        console.log(`[LINK] Background AI analysis complete for: ${link._id}`);
+      } catch (aiErr) {
+        console.error("[LINK] Background AI Analysis failed:", aiErr.message);
+      }
+    })();
+
     // Invalidate analytics cache
     try { 
       if (redisClient.isOpen && redisClient.isReady) {
@@ -132,17 +157,6 @@ router.post("/", auth, validate(createLinkSchema), async (req, res) => {
       }
     } catch (e) {}
 
-    // Emit real-time update
-    const io = req.app.get("io");
-    if (io) {
-      if (link.vault) {
-        io.to(`vault_${link.vault}`).emit("linkUpdate", { action: "create", link });
-      } else {
-        io.to(`user_${req.user.id}`).emit("linkUpdate", { action: "create", link });
-      }
-    }
-
-    res.send(link);
   } catch (err) {
     console.error("[LINK] Create Error:", err.message);
     res.status(500).send({ msg: "Failed to create link", error: err.message });
