@@ -118,14 +118,13 @@ const fetchMetadata = async (url) => {
 
 const OpenAI = require("openai");
 
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
-
 const analyzeLink = async (url, title, manualCategory = null, note = "") => {
+  console.log(`[AI SERVICE] Starting analysis for ${url}`);
   let metadata = { pageTitle: "", pageDescription: "" };
   try {
     metadata = await fetchMetadata(url);
   } catch (e) {
-    console.log("[AI SERVICE] Metadata fetch skipped or failed");
+    console.log("[AI SERVICE] Metadata fetch failed");
   }
 
   const prompt = `Task: Analyze this URL and provide metadata.
@@ -142,34 +141,58 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
 
   JSON:`;
 
-  // 1. Try Gemini Models first
+  // 1. PRIORITIZE OPENAI IF KEY EXISTS (Much more stable)
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      console.log("[AI SERVICE] Attempting OpenAI (GPT-4o-mini)...");
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY.trim() });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        timeout: 10000 // 10 second timeout
+      });
+
+      const aiResponse = JSON.parse(completion.choices[0].message.content);
+      console.log("[AI SERVICE] OpenAI analysis successful!");
+      return { 
+        summary: aiResponse.summary || "No summary provided.", 
+        category: manualCategory || aiResponse.category || "General", 
+        tags: aiResponse.tags || [], 
+        readTime: parseInt(aiResponse.readTime) || 2, 
+        embedding: [] 
+      };
+    } catch (err) {
+      console.error("[AI SERVICE] OpenAI failed:", err.message);
+    }
+  }
+
+  // 2. FALLBACK TO GEMINI
   if (process.env.GEMINI_API_KEY) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
     const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash"];
 
     for (const modelName of modelsToTry) {
       try {
-        console.log(`[AI SERVICE] Attempting Gemini analysis: ${modelName}`);
+        console.log(`[AI SERVICE] Attempting Gemini fallback: ${modelName}`);
         const model = genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent(prompt);
         const text = result.response.text().trim();
         const start = text.indexOf("{");
         const end = text.lastIndexOf("}");
-        if (start === -1) throw new Error("No JSON");
         
         const aiResponse = JSON.parse(text.substring(start, end + 1));
-        const summary = aiResponse.summary || "No summary provided.";
-        const tags = aiResponse.tags || [];
+        console.log(`[AI SERVICE] Gemini ${modelName} successful!`);
         
         let embedding = [];
         try {
-           embedding = await generateEmbedding(`Title: ${title} | Summary: ${summary}`);
+           embedding = await generateEmbedding(`Title: ${title} | Summary: ${aiResponse.summary}`);
         } catch (e) {}
 
         return { 
-          summary, 
+          summary: aiResponse.summary || "No summary", 
           category: manualCategory || aiResponse.category || "General", 
-          tags, 
+          tags: aiResponse.tags || [], 
           readTime: parseInt(aiResponse.readTime) || 2, 
           embedding 
         };
@@ -179,33 +202,9 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
     }
   }
 
-  // 2. ULTRA STABLE FALLBACK: OpenAI GPT-4o-mini
-  if (openai) {
-    try {
-      console.log("[AI SERVICE] All Gemini models failed. Falling back to OpenAI...");
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
-      });
-
-      const aiResponse = JSON.parse(completion.choices[0].message.content);
-      const summary = aiResponse.summary || "No summary provided.";
-      
-      return { 
-        summary, 
-        category: manualCategory || aiResponse.category || "General", 
-        tags: aiResponse.tags || [], 
-        readTime: parseInt(aiResponse.readTime) || 2, 
-        embedding: [] // OpenAI embedding is different, so we skip it for now to stay compatible
-      };
-    } catch (err) {
-      console.error("[AI SERVICE] OpenAI Fallback also failed:", err.message);
-    }
-  }
-
+  console.error("[AI SERVICE] All AI models failed or no keys found.");
   return { 
-    summary: "AI analysis is temporarily unavailable. Check API keys.", 
+    summary: "AI analysis failed. Please check your API keys in Render settings.", 
     category: manualCategory || "General", 
     tags: [], 
     readTime: 2, 
