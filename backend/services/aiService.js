@@ -117,65 +117,86 @@ const fetchMetadata = async (url) => {
 };
 
 const analyzeLink = async (url, title, manualCategory = null, note = "") => {
-  const metadata = await fetchMetadata(url);
+  let metadata = { pageTitle: "", pageDescription: "" };
+  try {
+    metadata = await fetchMetadata(url);
+  } catch (e) {
+    console.log("[AI SERVICE] Metadata fetch skipped or failed");
+  }
+
   if (!process.env.GEMINI_API_KEY) return { summary: "No Key", category: "General", tags: [], embedding: [] };
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-  const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"];
+  const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash"];
   
   let lastError = null;
 
   for (const modelName of modelsToTry) {
-    try {
-      console.log(`[AI SERVICE] Attempting analysis with model: ${modelName}`);
-      const model = genAI.getGenerativeModel({ model: modelName });
+    // Retry logic for 503 errors
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`[AI SERVICE] Attempting analysis with model: ${modelName} (Attempt ${attempt})`);
+        const model = genAI.getGenerativeModel({ model: modelName });
 
-      const prompt = `Analyze this bookmark and respond ONLY with a JSON object containing: 
-      1. "summary": A concise 2-sentence summary.
-      2. "category": A single word category (e.g., Tech, Design, Productivity, News, Entertainment, Education).
-      3. "tags": An array of 3 relevant short tags.
-      4. "readTime": Estimated reading time in minutes (NUMBER ONLY, e.g., 5).
-      
-      URL: ${url}
-      Title: ${title}
-      Note: ${note}
-      Metadata: ${metadata.pageTitle}`;
+        const prompt = `Task: Analyze this URL and provide metadata.
+        URL: ${url}
+        Title: ${title}
+        User Note: ${note}
+        Scraped Title: ${metadata.pageTitle}
 
-      const result = await model.generateContent(prompt);
-      let text = result.response.text().trim();
-      
-      const start = text.indexOf("{");
-      const end = text.lastIndexOf("}");
-      if (start === -1 || end === -1) throw new Error("No JSON found");
-      
-      const aiResponse = JSON.parse(text.substring(start, end + 1));
-      
-      let readTime = parseInt(aiResponse.readTime);
-      if (isNaN(readTime)) readTime = 2;
+        Response MUST be a valid JSON object with these EXACT keys:
+        "summary": 2-sentence summary.
+        "category": One word (e.g. Tech, Education, News, Finance).
+        "tags": Array of 3 short tags.
+        "readTime": Number of minutes.
 
-      const category = manualCategory || aiResponse.category || "General";
-      const embeddingText = `Title: ${title} | Category: ${category} | Summary: ${aiResponse.summary} | Tags: ${aiResponse.tags?.join(", ")} | Note: ${note} | Description: ${metadata.pageDescription}`;
-      const embedding = await generateEmbedding(embeddingText);
+        JSON:`;
 
-      console.log(`[AI SERVICE] Analysis successful with ${modelName}`);
-      return { 
-        summary: aiResponse.summary || "No summary", 
-        category, 
-        tags: aiResponse.tags || [], 
-        readTime, 
-        embedding 
-      };
-    } catch (err) {
-      console.error(`[AI SERVICE] Model ${modelName} failed:`, err.message);
-      lastError = err;
-      continue; // Try next model
+        const result = await model.generateContent(prompt);
+        let text = result.response.text().trim();
+        
+        // Find JSON block
+        const start = text.indexOf("{");
+        const end = text.lastIndexOf("}");
+        if (start === -1 || end === -1) throw new Error("AI returned no JSON");
+        
+        const aiResponse = JSON.parse(text.substring(start, end + 1));
+        
+        let readTime = parseInt(aiResponse.readTime) || 2;
+        const category = manualCategory || aiResponse.category || "General";
+        const summary = aiResponse.summary || "No summary provided.";
+        const tags = aiResponse.tags || [];
+
+        // Generate embedding (OPTIONAL - Don't fail if this fails)
+        let embedding = [];
+        try {
+          const embeddingText = `Title: ${title} | Summary: ${summary} | Tags: ${tags.join(", ")}`;
+          embedding = await generateEmbedding(embeddingText);
+        } catch (embErr) {
+          console.error("[AI SERVICE] Optional embedding failed, continuing...");
+        }
+
+        console.log(`[AI SERVICE] Analysis successful with ${modelName}`);
+        return { summary, category, tags, readTime, embedding };
+
+      } catch (err) {
+        console.error(`[AI SERVICE] ${modelName} attempt ${attempt} failed:`, err.message);
+        lastError = err;
+        
+        // If it's a 503 or 429, wait a bit before retrying or moving to next model
+        if (err.message.includes("503") || err.message.includes("429")) {
+          await new Promise(r => setTimeout(r, 1000));
+        } else if (attempt === 1) {
+            // For other errors, just try the next model instead of retrying same one
+            break;
+        }
+      }
     }
   }
 
-  // If all models fail
-  console.error("[AI SERVICE] All analysis models failed.", lastError?.message);
+  console.error("[AI SERVICE] All analysis models failed completely.");
   return { 
-    summary: "AI Analysis currently unavailable (Service Busy)", 
+    summary: "AI analysis is temporarily unavailable. Please try again later.", 
     category: manualCategory || "General", 
     tags: [], 
     readTime: 2, 
