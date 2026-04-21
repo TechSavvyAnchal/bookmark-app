@@ -161,7 +161,9 @@ function Dashboard() {
 
   const handleAdd = async (newBookmark) => {
     try {
-      await api.post(`/links`, newBookmark);
+      const res = await api.post(`/links`, newBookmark);
+      // Immediately update local state so user sees it
+      setBookmarks(prev => [res.data, ...prev]);
       toast.success("Link successfully added");
     } catch (err) {
       toast.error("Failed to add bookmark.");
@@ -169,10 +171,16 @@ function Dashboard() {
   };
 
   const handleDelete = async (id) => {
+    // Optimistically remove from UI
+    const previousBookmarks = [...bookmarks];
+    setBookmarks(prev => prev.filter(b => b._id !== id));
+    
     try {
       await api.delete(`/links/${id}`);
       toast.success("Link deleted");
     } catch (err) {
+      // Revert if API fails
+      setBookmarks(previousBookmarks);
       toast.error("Failed to delete.");
     }
   };
