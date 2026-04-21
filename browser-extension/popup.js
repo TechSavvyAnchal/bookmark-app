@@ -1,5 +1,5 @@
 const CONFIG = {
-  API_URL: "http://localhost:5000",
+  API_URL: "https://bookmark-app-c9lh.onrender.com",
 };
 
 document.addEventListener("DOMContentLoaded", () => {
