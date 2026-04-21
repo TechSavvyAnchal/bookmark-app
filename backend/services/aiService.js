@@ -116,6 +116,10 @@ const fetchMetadata = async (url) => {
   }
 };
 
+const OpenAI = require("openai");
+
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+
 const analyzeLink = async (url, title, manualCategory = null, note = "") => {
   let metadata = { pageTitle: "", pageDescription: "" };
   try {
@@ -124,79 +128,84 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
     console.log("[AI SERVICE] Metadata fetch skipped or failed");
   }
 
-  if (!process.env.GEMINI_API_KEY) return { summary: "No Key", category: "General", tags: [], embedding: [] };
+  const prompt = `Task: Analyze this URL and provide metadata.
+  URL: ${url}
+  Title: ${title}
+  User Note: ${note}
+  Scraped Title: ${metadata.pageTitle}
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-  const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash"];
-  
-  let lastError = null;
+  Response MUST be a valid JSON object with these EXACT keys:
+  "summary": 2-sentence summary.
+  "category": One word (e.g. Tech, Education, News, Finance).
+  "tags": Array of 3 short tags.
+  "readTime": Number of minutes.
 
-  for (const modelName of modelsToTry) {
-    // Retry logic for 503 errors
-    for (let attempt = 1; attempt <= 2; attempt++) {
+  JSON:`;
+
+  // 1. Try Gemini Models first
+  if (process.env.GEMINI_API_KEY) {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash"];
+
+    for (const modelName of modelsToTry) {
       try {
-        console.log(`[AI SERVICE] Attempting analysis with model: ${modelName} (Attempt ${attempt})`);
+        console.log(`[AI SERVICE] Attempting Gemini analysis: ${modelName}`);
         const model = genAI.getGenerativeModel({ model: modelName });
-
-        const prompt = `Task: Analyze this URL and provide metadata.
-        URL: ${url}
-        Title: ${title}
-        User Note: ${note}
-        Scraped Title: ${metadata.pageTitle}
-
-        Response MUST be a valid JSON object with these EXACT keys:
-        "summary": 2-sentence summary.
-        "category": One word (e.g. Tech, Education, News, Finance).
-        "tags": Array of 3 short tags.
-        "readTime": Number of minutes.
-
-        JSON:`;
-
         const result = await model.generateContent(prompt);
-        let text = result.response.text().trim();
-        
-        // Find JSON block
+        const text = result.response.text().trim();
         const start = text.indexOf("{");
         const end = text.lastIndexOf("}");
-        if (start === -1 || end === -1) throw new Error("AI returned no JSON");
+        if (start === -1) throw new Error("No JSON");
         
         const aiResponse = JSON.parse(text.substring(start, end + 1));
-        
-        let readTime = parseInt(aiResponse.readTime) || 2;
-        const category = manualCategory || aiResponse.category || "General";
         const summary = aiResponse.summary || "No summary provided.";
         const tags = aiResponse.tags || [];
-
-        // Generate embedding (OPTIONAL - Don't fail if this fails)
+        
         let embedding = [];
         try {
-          const embeddingText = `Title: ${title} | Summary: ${summary} | Tags: ${tags.join(", ")}`;
-          embedding = await generateEmbedding(embeddingText);
-        } catch (embErr) {
-          console.error("[AI SERVICE] Optional embedding failed, continuing...");
-        }
+           embedding = await generateEmbedding(`Title: ${title} | Summary: ${summary}`);
+        } catch (e) {}
 
-        console.log(`[AI SERVICE] Analysis successful with ${modelName}`);
-        return { summary, category, tags, readTime, embedding };
-
+        return { 
+          summary, 
+          category: manualCategory || aiResponse.category || "General", 
+          tags, 
+          readTime: parseInt(aiResponse.readTime) || 2, 
+          embedding 
+        };
       } catch (err) {
-        console.error(`[AI SERVICE] ${modelName} attempt ${attempt} failed:`, err.message);
-        lastError = err;
-        
-        // If it's a 503 or 429, wait a bit before retrying or moving to next model
-        if (err.message.includes("503") || err.message.includes("429")) {
-          await new Promise(r => setTimeout(r, 1000));
-        } else if (attempt === 1) {
-            // For other errors, just try the next model instead of retrying same one
-            break;
-        }
+        console.error(`[AI SERVICE] Gemini ${modelName} failed:`, err.message);
       }
     }
   }
 
-  console.error("[AI SERVICE] All analysis models failed completely.");
+  // 2. ULTRA STABLE FALLBACK: OpenAI GPT-4o-mini
+  if (openai) {
+    try {
+      console.log("[AI SERVICE] All Gemini models failed. Falling back to OpenAI...");
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" }
+      });
+
+      const aiResponse = JSON.parse(completion.choices[0].message.content);
+      const summary = aiResponse.summary || "No summary provided.";
+      
+      return { 
+        summary, 
+        category: manualCategory || aiResponse.category || "General", 
+        tags: aiResponse.tags || [], 
+        readTime: parseInt(aiResponse.readTime) || 2, 
+        embedding: [] // OpenAI embedding is different, so we skip it for now to stay compatible
+      };
+    } catch (err) {
+      console.error("[AI SERVICE] OpenAI Fallback also failed:", err.message);
+    }
+  }
+
   return { 
-    summary: "AI analysis is temporarily unavailable. Please try again later.", 
+    summary: "AI analysis is temporarily unavailable. Check API keys.", 
     category: manualCategory || "General", 
     tags: [], 
     readTime: 2, 
