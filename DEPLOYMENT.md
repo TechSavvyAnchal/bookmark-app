@@ -1,67 +1,79 @@
-# 🚀 Deployment Guide: AI-Powered Bookmark Manager
+# Production Deployment & Infrastructure Guide
 
-This document outlines the steps to move this project from a local development environment to a production-ready cloud environment.
-
----
-
-## 🏗️ Architecture Overview
-- **Frontend:** React (Vite) deployed on **Vercel**.
-- **Backend:** Node.js (Express) deployed on **Render**.
-- **Database:** MongoDB Atlas (Cloud).
-- **Cache/Socket:** Redis (optional/integrated).
+This document details the production architecture, deployment strategy, and environment configuration for the AI-Powered Bookmark Manager.
 
 ---
 
-## 1. Backend Deployment (Render)
-1. **Repository:** Ensure your code is pushed to GitHub.
-2. **New Web Service:** Create a new "Web Service" on [Render.com](https://render.com).
-3. **Configuration:**
-   - **Root Directory:** `backend`
-   - **Runtime:** `Node`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-4. **Environment Variables:** In the "Env Vars" tab, add:
-   - `MONGO_URI`: Your MongoDB Atlas connection string.
-   - `GEMINI_API_KEY`: Your Google AI API key.
-   - `JWT_SECRET`: A long random string.
-   - `PORT`: `5000`
-   - `EMAIL_USER` / `EMAIL_PASS`: (For cron job summaries).
-   - `FRONTEND_URL`: Your final Vercel URL (e.g., `https://your-app.vercel.app`).
-5. **Database Access:** In MongoDB Atlas, go to **Network Access** and "Allow Access from Anywhere" (`0.0.0.0/0`) so Render can connect.
+## 🏗️ System Architecture
+
+The application is architected as a decoupled full-stack system, optimized for scalability and containerization.
+
+- **Frontend:** React (Vite) / Tailwind CSS
+- **Backend:** Node.js / Express.js / Socket.io
+- **Database:** MongoDB Atlas (NoSQL)
+- **Caching:** Redis (Session management & Rate limiting)
+- **AI Integration:** Google Gemini Pro
+- **Security:** JWT Auth, OAuth 2.0, CORS, and Rate Limiting
 
 ---
 
-## 2. Frontend Deployment (Vercel)
-1. **New Project:** Import your GitHub repository into [Vercel](https://vercel.com).
-2. **Configuration:**
-   - **Framework Preset:** `Vite`
-   - **Root Directory:** `frontend`
-3. **Environment Variables:**
-   - `VITE_API_URL`: Your **Render Web Service URL** (e.g., `https://ai-bookmarks-api.onrender.com`).
-   - `VITE_GOOGLE_CLIENT_ID`: Your Google OAuth Client ID.
-4. **Deploy:** Hit deploy. Vercel will provide you with a production URL.
+## 🚀 Deployment Strategy
+
+### 1. Cloud-Native Deployment (Recommended)
+
+The project is configured for seamless CI/CD integration using modern cloud providers.
+
+#### Backend (Render / Heroku)
+- **Runtime:** Node.js LTS
+- **Build Command:** `npm install`
+- **Infrastructure:** Deployed as a Web Service with auto-scaling capabilities.
+- **Environment Management:** Secured via encrypted environment variables.
+
+#### Frontend (Vercel / Netlify)
+- **Runtime:** Edge Network / Static Hosting
+- **Build Command:** `npm run build`
+- **Routing:** Configured for Single Page Application (SPA) fallbacks.
+
+### 2. Containerized Deployment (Docker)
+
+For local development or self-hosted production environments, the project includes a multi-container Docker configuration.
+
+```bash
+# To spin up the entire stack (Backend, Frontend, Redis)
+docker-compose up --build
+```
 
 ---
 
-## 3. Google OAuth Configuration (Required)
-Your Google Login will only work if the production URL is authorized.
-1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).
-2. Edit your **OAuth 2.0 Client ID**.
-3. Under **Authorized JavaScript Origins**, add:
-   - `https://your-app.vercel.app`
-4. Under **Authorized Redirect URIs**, add:
-   - `https://your-app.vercel.app`
-5. **Save** and wait ~5 minutes for changes to propagate.
+## 🔐 Environment Configuration
+
+Production stability and security are managed through strictly defined environment variables.
+
+### Backend Requirements
+| Key | Description |
+| :--- | :--- |
+| `MONGO_URI` | Production MongoDB connection string |
+| `GEMINI_API_KEY` | Google AI API credentials |
+| `JWT_SECRET` | HS256 Signing Key for secure sessions |
+| `FRONTEND_URL` | CORS whitelist for the production frontend |
+
+### Frontend Requirements
+| Key | Description |
+| :--- | :--- |
+| `VITE_API_URL` | Base endpoint for the production API |
+| `VITE_GOOGLE_CLIENT_ID` | OAuth 2.0 credentials for secure login |
 
 ---
 
-## 4. Browser Extension & Bookmarklet
-Once the backend is deployed, you must update the "Saver" tools:
-1. **Update Extension:** Open `browser-extension/popup.js` and change `CONFIG.API_URL` to your live Render URL.
-2. **Update ZIP:** Re-zip the extension folder and place it in `frontend/public/extension-bundle.zip`.
-3. **Redeploy Frontend:** Push these changes to GitHub so the "Download Extension" button provides the production-ready version.
+## 🛠️ Security & Operational Best Practices
+
+- **CORS Configuration:** The API implements strict Cross-Origin Resource Sharing (CORS) policies to ensure only authorized clients (Frontend & Extension) can access resources.
+- **Secrets Management:** Sensitive keys are never committed to version control; they are managed through provider-specific secret vaults.
+- **Automated CI/CD:** Push-to-deploy workflows are configured for automatic staging and production builds upon merging to the `main` branch.
+- **Error Monitoring:** Structured logging is implemented to track system health and AI service performance in production environments.
 
 ---
 
-## 💡 Interview Tip
-When asked about deployment, mention that you used **Environment Variables** to keep secrets secure and configured **CORS (Cross-Origin Resource Sharing)** on the backend to allow the Frontend, Extension, and Bookmarklet to communicate securely across different domains.
+## 🧩 Extension Distribution
+
+The browser extension is configured to point to the production API. The production bundle is automatically generated and hosted as a static asset within the frontend build, ensuring users always download the correctly configured version for the live environment.
