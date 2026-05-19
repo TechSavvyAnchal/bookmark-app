@@ -1,68 +1,47 @@
-# 🚀 AI-Powered Bookmark Manager
+# 🚀 AI Bookmark Manager
 
-A full-stack application that leverages AI to transform how you save and interact with the web. Automatically summarize articles, generate quizzes, and chat with your entire bookmark collection.
+I built this project because I have a "tab hoarding" problem—saving hundreds of bookmarks but never actually reading them. This app doesn't just store links; it uses AI to help me actually process and remember the content I save.
 
-## ✨ Core Features
+## 💡 Why I Built This
 
--   **AI Smart Analysis:** Uses Google Gemini (2.0 Flash) to automatically generate summaries, categories, and tags.
--   **Interactive AI Chat:** A built-in assistant to query your bookmarks or get recommendations from your saved content.
--   **Comprehension Quizzes:** Automatically generates quizzes from articles to help you retain what you read.
--   **Browser Extension & Bookmarklet:** Two powerful ways to save content instantly without leaving your current tab.
--   **Reader Mode:** A clean, distraction-free reading experience for saved articles.
--   **Collaborative Vaults:** Create shared folders for bookmarks with friends or teammates.
--   **Smart Analytics:** Track your reading habits and interest distribution over time.
+Most bookmark managers are just lists of URLs. I wanted something that could:
+1. **Summarize** long articles instantly so I know if they're worth my time.
+2. **Quiz me** on what I read to make sure I actually understood it.
+3. **Chat** with my bookmarks so I can find specific info across dozens of saved pages without searching manually.
 
-## 🛠️ Tech Stack
+## 🛠️ The Tech Stack (and why I chose it)
 
--   **Frontend:** React, Tailwind CSS, Framer Motion, Recharts, Lucide Icons
--   **Backend:** Node.js, Express, MongoDB (Mongoose), Redis (Caching)
--   **AI Engine:** Google Gemini AI
--   **Utilities:** Readability.js, Turndown, Nodemailer
+-   **Frontend:** **React** with **Tailwind CSS**. I used **Framer Motion** for smooth UI transitions because I wanted the app to feel "alive" and modern.
+-   **Backend:** **Node.js** & **Express**. It's lightweight and handles the asynchronous AI calls perfectly.
+-   **Database:** **MongoDB** for the flexible schema (bookmarks can have very different metadata).
+-   **AI:** **Google Gemini 1.5 Flash**. I chose this for its speed and massive context window, which is great for analyzing long research papers or articles.
+-   **Caching:** **Redis**. AI calls can be slow/expensive, so I cache summaries and analytics to keep the UX snappy.
 
-## 📦 Local Setup & Installation
+## 🧠 Technical Challenges I Solved
 
-### 1. Prerequisites
-- Node.js (v18+)
-- MongoDB (Local or Atlas)
-- Redis (Optional for local, recommended for production)
+-   **Web Scraping & Noise Reduction:** Most websites are full of ads and navbars. I integrated `Readability.js` to strip out the "noise" before sending the text to Gemini, which significantly improved summary quality and reduced API costs.
+-   **The "Saver" Problem:** I realized I wouldn't use the app if I had to manually copy-paste links. I built a **Chrome Extension** and a **Javascript Bookmarklet** so I can save any page in one click.
+-   **Real-time Retention:** I built a custom Quiz engine that takes the AI's analysis and generates multiple-choice questions on the fly. It’s been the best feature for actually learning from my bookmarks.
 
-### 2. Backend Setup
+## 📦 How to Run It Locally
+
+### 1. Backend
 ```bash
 cd backend
 npm install
-# Configure .env based on .env.example
+# Add your MONGO_URI and GEMINI_API_KEY to .env
 npm start
 ```
 
-### 3. Frontend Setup
+### 2. Frontend
 ```bash
 cd frontend
 npm install
-# Configure .env (Set VITE_API_URL to http://localhost:5000)
 npm run dev
 ```
 
-## 🔒 Essential Environment Variables
-
-### Backend (`/backend/.env`)
-- `MONGO_URI`: MongoDB connection string.
-- `GEMINI_API_KEY`: Google Generative AI API Key.
-- `JWT_SECRET`: Random string for secure authentication.
-- `GOOGLE_CLIENT_ID`: Required for Google Login.
-- `RECAPTCHA_SECRET_KEY`: For security verification.
-
-### Frontend (`/frontend/.env`)
-- `VITE_API_URL`: URL of your backend (Default: `http://localhost:5000`).
-- `VITE_GOOGLE_CLIENT_ID`: Must match the backend client ID.
-
-## 🚢 Deployment
-For detailed production deployment steps on **Render** and **Vercel**, please refer to the [**DEPLOYMENT.md**](./DEPLOYMENT.md) guide.
-
-## 🧩 Browser Tools
-This project includes a professional-grade browser extension and a one-click bookmarklet.
-1. Visit the **Extension Guide** page within the app to get your personal Access Token.
-2. Download the extension bundle directly from the app.
-3. Drag the Bookmarklet to your bookmarks bar for instant, zero-install saving.
+## 🚢 Deployment & Infrastructure
+I've documented the production setup (Vercel, Render, and Docker) in [**DEPLOYMENT.md**](./DEPLOYMENT.md).
 
 ---
-*Developed as a high-performance portfolio project demonstrating Full-Stack expertise and AI integration.*
+
