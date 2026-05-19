@@ -29,7 +29,6 @@ Most bookmark managers are just lists of URLs. I wanted something that could:
 ```bash
 cd backend
 npm install
-# Add your MONGO_URI and GEMINI_API_KEY to .env
 npm start
 ```
 
