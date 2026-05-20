@@ -123,6 +123,16 @@ router.post("/", auth, validate(createLinkSchema), async (req, res) => {
     // 2. Respond immediately to the frontend
     res.send(link);
 
+    // Emit 'create' event via Socket.io
+    const io = req.app.get("io");
+    if (io) {
+      if (link.vault) {
+        io.to(`vault_${link.vault}`).emit("linkUpdate", { action: "create", link });
+      } else {
+        io.to(`user_${req.user.id}`).emit("linkUpdate", { action: "create", link });
+      }
+    }
+
     // 3. Run AI Analysis in the background
     (async () => {
       try {

@@ -89,7 +89,13 @@ function Dashboard() {
         } else if (data.action === "delete") {
           setBookmarks(prev => prev.filter(b => b._id !== data.linkId));
         } else if (data.action === "update") {
-          setBookmarks(prev => prev.map(b => b._id === data.link._id ? data.link : b));
+          setBookmarks(prev => {
+            const exists = prev.find(b => b._id === data.link._id);
+            if (exists) {
+              return prev.map(b => b._id === data.link._id ? data.link : b);
+            }
+            return [data.link, ...prev];
+          });
         }
       });
 
