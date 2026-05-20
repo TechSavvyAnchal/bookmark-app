@@ -77,12 +77,13 @@ router.post("/:id/share", auth, async (req, res) => {
     
     // CASE 1: User doesn't exist yet
     if (!userToShare) {
-      console.log(`User ${lowerEmail} not found. Sending invitation email...`);
+      console.log(`[VAULT] User ${lowerEmail} not found. Sending invitation email...`);
       try {
         await sendVaultInvitation(lowerEmail, inviter?.name || "A friend", vault.name);
-        return res.status(200).json({ msg: "Invitation email sent! They can join after signing up." });
+        return res.json({ msg: "Invitation email sent! They can join after signing up." });
       } catch (mailErr) {
-        return res.status(200).json({ msg: "Invitation prepared, but email service failed. Check settings!" });
+        console.error("[VAULT ERROR] Invitation email failed:", mailErr.message);
+        return res.status(500).json({ msg: `Invitation prepared, but email failed: ${mailErr.message}. Check SMTP settings.` });
       }
     }
 
@@ -99,7 +100,8 @@ router.post("/:id/share", auth, async (req, res) => {
       await sendVaultInvitation(lowerEmail, inviter?.name || "A friend", vault.name);
       return res.json({ msg: `User ${userToShare.name} added and notified via email!` });
     } catch (err) {
-      return res.json({ msg: `User ${userToShare.name} added, but notification email failed.` });
+      console.error("[VAULT ERROR] Notification email failed:", err.message);
+      return res.json({ msg: `User ${userToShare.name} added, but notification email failed: ${err.message}` });
     }
 
   } catch (err) {

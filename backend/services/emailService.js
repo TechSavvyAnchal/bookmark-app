@@ -83,43 +83,42 @@ const sendWeeklyDigest = async (user) => {
 };
 
 const sendVaultInvitation = async (toEmail, inviterName, vaultName) => {
-  try {
-    const signupUrl = "http://localhost:5173/signup"; // Use your actual frontend URL
-    const emailHtml = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fdfdfd; color: #333;">
-        <h1 style="color: #4f46e5; text-align: center;">You're Invited! 📬</h1>
-        <p>Hi there,</p>
-        <p><strong>${inviterName}</strong> has invited you to collaborate in their AI Bookmark Vault: <strong>${vaultName}</strong>.</p>
-        
-        <div style="background: #f4f4f4; padding: 20px; border-radius: 12px; margin: 20px 0; text-align: center;">
-          <p style="font-size: 16px; font-weight: bold; margin-bottom: 20px;">Join the conversation and start sharing links today!</p>
-          <a href="${signupUrl}" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
-            Sign Up Now
-          </a>
-        </div>
-        
-        <p style="font-size: 12px; color: #666; margin-top: 40px;">
-          If you don't know ${inviterName} or were not expecting this invitation, you can safely ignore this email.
-        </p>
-        
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <div style="text-align: center; color: #9ca3af; font-size: 11px;">
-          <p>Sent via AI Bookmarking App • Built for better research.</p>
-        </div>
+  const signupUrl = "http://localhost:5173/signup"; // Use your actual frontend URL
+  const emailHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fdfdfd; color: #333;">
+      <h1 style="color: #4f46e5; text-align: center;">You're Invited! 📬</h1>
+      <p>Hi there,</p>
+      <p><strong>${inviterName}</strong> has invited you to collaborate in their AI Bookmark Vault: <strong>${vaultName}</strong>.</p>
+      
+      <div style="background: #f4f4f4; padding: 20px; border-radius: 12px; margin: 20px 0; text-align: center;">
+        <p style="font-size: 16px; font-weight: bold; margin-bottom: 20px;">Join the conversation and start sharing links today!</p>
+        <a href="${signupUrl}" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+          Sign Up Now
+        </a>
       </div>
-    `;
+      
+      <p style="font-size: 12px; color: #666; margin-top: 40px;">
+        If you don't know ${inviterName} or were not expecting this invitation, you can safely ignore this email.
+      </p>
+      
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+      <div style="text-align: center; color: #9ca3af; font-size: 11px;">
+        <p>Sent via AI Bookmarking App • Built for better research.</p>
+      </div>
+    </div>
+  `;
 
+  try {
     await transporter.sendMail({
       from: `"AI Bookmarking App" <${process.env.EMAIL_USER}>`,
       to: toEmail,
       subject: `Invitation to collaborate on "${vaultName}" 📚`,
       html: emailHtml,
     });
-    console.log(`Vault invitation email sent to ${toEmail}`);
-    return true;
+    console.log(`[EMAIL] Vault invitation sent to ${toEmail}`);
   } catch (err) {
-    console.error("Error sending vault invitation:", err);
-    return false;
+    console.error(`[EMAIL ERROR] Failed to send vault invitation to ${toEmail}:`, err.message);
+    throw new Error(`Email delivery failed: ${err.message}`);
   }
 };
 
