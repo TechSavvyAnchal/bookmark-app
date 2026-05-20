@@ -13,7 +13,7 @@ const generateEmbedding = async (text) => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
   
   // Try models in order of preference
-  const models = ["text-embedding-004", "embedding-001"];
+  const models = ["text-embedding-004", "embedding-001", "gemini-embedding-001"];
   
   for (const modelName of models) {
     try {
@@ -78,7 +78,17 @@ const generateQuiz = async (url, title, textContent) => {
     return JSON.parse(text.substring(start, end + 1));
   } catch (err) {
     console.error("[AI SERVICE] Quiz Generation Error:", err.message);
-    throw err;
+    // Fallback to 3.1-flash-lite if 2.5-flash fails
+    try {
+      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+      const result = await fallbackModel.generateContent(prompt);
+      const resText = result.response.text().trim();
+      const start = resText.indexOf("[");
+      const end = resText.lastIndexOf("]");
+      return JSON.parse(resText.substring(start, end + 1));
+    } catch (fallbackErr) {
+      throw fallbackErr;
+    }
   }
 };
 
@@ -170,7 +180,7 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
   // 2. FALLBACK TO GEMINI
   if (process.env.GEMINI_API_KEY) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash"];
+    const modelsToTry = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.0-flash"];
 
     for (const modelName of modelsToTry) {
       try {
@@ -214,7 +224,7 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
 
 const chatWithBookmarks = async (question, bookmarks) => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-  const chatModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  const chatModels = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.0-flash"];
 
   const context = bookmarks.map(b => `- ${b.title}: ${b.summary}`).join("\n");
   const prompt = `Question: ${question}\n\nContext:\n${context}`;
