@@ -110,7 +110,7 @@ const sendVaultInvitation = async (toEmail, inviterName, vaultName) => {
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `"AI Bookmarking App" <${process.env.EMAIL_USER}>`,
       to: toEmail,
       subject: `Invitation to collaborate on "${vaultName}" 📚`,
       html: emailHtml,
