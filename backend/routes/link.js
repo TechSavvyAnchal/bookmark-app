@@ -108,19 +108,21 @@ router.post("/", auth, validate(createLinkSchema), async (req, res) => {
     const { url, title, category, note, vault } = req.body;
     console.log(`[LINK] Creating link for user ${req.user.id}: ${url}`);
 
-    // 1. Create link with placeholder data immediately
+    // 1. Generate speculative data for "instant" feel
+    const { speculateAnalysis } = require("../services/aiService");
+    const speculativeData = speculateAnalysis(url, title, note);
+
+    // 2. Create link with speculative data immediately
     const link = await Link.create({
       ...req.body,
-      summary: "AI is analyzing this content...",
-      category: category || "General",
-      tags: [],
-      readTime: 1,
-      embedding: [],
+      ...speculativeData,
+      category: category || speculativeData.category,
       user: req.user.id,
-      vault: vault || undefined
+      vault: vault || undefined,
+      embedding: []
     });
 
-    // 2. Respond immediately to the frontend
+    // 3. Respond immediately to the frontend
     res.send(link);
 
     // Emit 'create' event via Socket.io

@@ -169,7 +169,11 @@ function Dashboard() {
     try {
       const res = await api.post(`/links`, newBookmark);
       // Immediately update local state so user sees it
-      setBookmarks(prev => [res.data, ...prev]);
+      setBookmarks(prev => {
+        // Prevent duplicate if socket already added it
+        if (prev.find(b => b._id === res.data._id)) return prev;
+        return [res.data, ...prev];
+      });
       toast.success("Link successfully added");
     } catch (err) {
       toast.error("Failed to add bookmark.");

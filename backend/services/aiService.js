@@ -128,6 +128,32 @@ const fetchMetadata = async (url) => {
 
 const OpenAI = require("openai");
 
+const speculateAnalysis = (url, title, note) => {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    const cleanTitle = title ? title.trim() : "";
+    
+    let summary = `A resource from ${domain}`;
+    if (cleanTitle) summary += ` regarding "${cleanTitle}"`;
+    if (note) summary += `. User note: ${note}`;
+    summary += `. AI is currently deep-scanning for more details...`;
+
+    return {
+      summary,
+      category: "Analyzing...",
+      tags: [domain.split('.')[0], "new"],
+      readTime: 1
+    };
+  } catch (e) {
+    return {
+      summary: "AI is analyzing this content...",
+      category: "Analyzing...",
+      tags: [],
+      readTime: 1
+    };
+  }
+};
+
 const analyzeLink = async (url, title, manualCategory = null, note = "") => {
   console.log(`[AI SERVICE] Starting analysis for ${url}`);
   let metadata = { pageTitle: "", pageDescription: "" };
@@ -245,4 +271,4 @@ const chatWithBookmarks = async (question, bookmarks) => {
   }
 };
 
-module.exports = { analyzeLink, fetchReaderContent, generateQuiz, chatWithBookmarks, generateEmbedding };
+module.exports = { speculateAnalysis, analyzeLink, fetchReaderContent, generateQuiz, chatWithBookmarks, generateEmbedding };

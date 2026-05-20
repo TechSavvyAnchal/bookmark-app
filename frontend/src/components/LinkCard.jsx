@@ -281,9 +281,15 @@ export default function LinkCard({ bookmark, onDelete, onUpdate, viewMode = "gri
           <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-500 animate-pulse" />
           <span className="text-[9px] md:text-[10px] font-black uppercase text-indigo-600/40 dark:text-indigo-400/40 tracking-[0.3em]">AI Synthesis</span>
         </div>
-        <p className="text-xs md:text-[14px] text-gray-600 dark:text-gray-300 leading-relaxed font-semibold italic line-clamp-3 md:line-clamp-4">
-          "{bookmark.summary}"
-        </p>
+        {bookmark.summary === "AI is analyzing this content..." ? (
+          <p className="text-xs md:text-[14px] text-indigo-500/60 dark:text-indigo-400/60 leading-relaxed font-bold italic animate-pulse">
+            {bookmark.summary}
+          </p>
+        ) : (
+          <p className="text-xs md:text-[14px] text-gray-600 dark:text-gray-300 leading-relaxed font-semibold italic line-clamp-3 md:line-clamp-4">
+            "{bookmark.summary}"
+          </p>
+        )}
       </div>
 
       <div className="flex items-center justify-between mt-auto pt-4 md:pt-5 border-t border-indigo-500/5">
