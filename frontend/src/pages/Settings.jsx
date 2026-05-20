@@ -205,18 +205,6 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Placement Tip */}
-        <div className="p-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-white/5">
-           <div className="flex gap-4 items-start">
-              <AlertTriangle className="w-5 h-5 text-amber-500 mt-1" />
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">Developer Note (Placement Tip)</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  This system uses <strong>Token Versioning</strong> for revocation. Instead of a database blacklist (which grows forever), we just increment a version number on the user object. Old tokens with the wrong version are instantly rejected by the middleware. This is O(1) time complexity and highly efficient.
-                </p>
-              </div>
-           </div>
-        </div>
       </div>
     </div>
   );
