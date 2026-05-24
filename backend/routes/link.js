@@ -10,14 +10,14 @@ const redisClient = require("../config/redis");
 
 // CHAT WITH BOOKMARKS (RAG)
 router.post("/chat", auth, async (req, res) => {
-  const { question } = req.body;
+  const { question, history } = req.body;
   if (!question) return res.status(400).send({ msg: "Question is required" });
 
-  const performKeywordRetrieval = async () => {
-    console.log(`[CHAT] Performing keyword retrieval for context: "${question}"`);
-    // Extract meaningful words (length > 3) to use as search terms
-    const keywords = question.split(/\s+/)
-      .filter(k => k.length > 3)
+  const performKeywordRetrieval = async (queryText) => {
+    console.log(`[CHAT] Performing keyword retrieval for context: "${queryText}"`);
+    // Extract meaningful words (length > 2) to use as search terms
+    const keywords = queryText.split(/\s+/)
+      .filter(k => k.length > 2)
       .map(k => k.replace(/[?.,!]/g, ""));
     
     let filter = { user: req.user.id };
@@ -26,64 +26,62 @@ router.post("/chat", auth, async (req, res) => {
       filter.$or = [
         { title: { $in: keywords.map(k => new RegExp(k, "i")) } },
         { tags: { $in: keywords.map(k => new RegExp(k, "i")) } },
-        { summary: { $in: keywords.map(k => new RegExp(k, "i")) } }
+        { summary: { $in: keywords.map(k => new RegExp(k, "i")) } },
+        { category: { $in: keywords.map(k => new RegExp(k, "i")) } },
+        { note: { $in: keywords.map(k => new RegExp(k, "i")) } }
       ];
     }
 
-    // Get up to 15 relevant bookmarks
-    return await Link.find(filter).limit(15);
+    // Get up to 20 relevant bookmarks for better context
+    return await Link.find(filter).limit(20);
   };
 
   try {
     // 1. Generate embedding for the question
     const queryEmbedding = await generateEmbedding(question);
 
+    let relevantLinks = [];
+
     if (!queryEmbedding || queryEmbedding.length === 0) {
-      const relevantLinks = await performKeywordRetrieval();
-      const answer = await chatWithBookmarks(question, relevantLinks);
-      return res.send({ answer });
-    }
+      relevantLinks = await performKeywordRetrieval(question);
+    } else {
+      // 2. Retrieve top relevant links using vector search (RAG)
+      const userVaults = await Vault.find({ members: req.user.id });
+      const vaultIds = userVaults.map(v => v._id);
 
-    // 2. Retrieve top relevant links using vector search (RAG)
-    const userVaults = await Vault.find({ members: req.user.id });
-    const vaultIds = userVaults.map(v => v._id);
+      try {
+        relevantLinks = await Link.aggregate([
+          {
+            $vectorSearch: {
+              index: "vector_index",
+              path: "embedding",
+              queryVector: queryEmbedding,
+              numCandidates: 100,
+              limit: 15
+            }
+          },
+          {
+            $match: {
+              $or: [
+                { user: new mongoose.Types.ObjectId(req.user.id) },
+                { vault: { $in: vaultIds } }
+              ]
+            }
+          }
+        ]);
 
-    try {
-      const relevantLinks = await Link.aggregate([
-        {
-          $vectorSearch: {
-            index: "vector_index",
-            path: "embedding",
-            queryVector: queryEmbedding,
-            numCandidates: 100,
-            limit: 10
-          }
-        },
-        {
-          $match: {
-            $or: [
-              { user: new mongoose.Types.ObjectId(req.user.id) },
-              { vault: { $in: vaultIds } }
-            ]
-          }
+        if (relevantLinks.length === 0) {
+          relevantLinks = await performKeywordRetrieval(question);
         }
-      ]);
-
-      if (relevantLinks.length === 0) {
-        // Try keyword fallback if vector search finds nothing
-        const fallbackLinks = await performKeywordRetrieval();
-        const answer = await chatWithBookmarks(question, fallbackLinks);
-        return res.send({ answer });
+      } catch (vectorErr) {
+        console.log("[CHAT] Vector search failed, falling back to keywords:", vectorErr.message);
+        relevantLinks = await performKeywordRetrieval(question);
       }
-
-      const answer = await chatWithBookmarks(question, relevantLinks);
-      res.send({ answer });
-    } catch (vectorErr) {
-      console.log("[CHAT] Vector search failed, falling back to keywords:", vectorErr.message);
-      const fallbackLinks = await performKeywordRetrieval();
-      const answer = await chatWithBookmarks(question, fallbackLinks);
-      res.send({ answer });
     }
+
+    const answer = await chatWithBookmarks(question, relevantLinks, history || []);
+    res.send({ answer });
+
   } catch (err) {
     console.error("Chat route error:", err.message);
     try {
@@ -94,7 +92,7 @@ router.post("/chat", auth, async (req, res) => {
 
       const linkList = fallbackLinks.map(l => `• ${l.title}`).join("\n");
       res.send({ 
-        answer: `I'm currently experiencing high demand and couldn't generate a summary, but based on your library, these might be relevant:\n\n${linkList}` 
+        answer: `I'm currently having some trouble processing your request, but I can see you have these in your library:\n\n${linkList}\n\nCould you try rephrasing your question?` 
       });
     } catch (e) {
       res.status(500).send({ msg: "Chat failed. Please try again later." });

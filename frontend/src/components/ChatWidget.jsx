@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, X, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 import axios from "axios";
 import { API_URL } from "../config";
+import ReactMarkdown from "react-markdown";
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,8 +31,12 @@ export default function ChatWidget() {
 
     try {
       const token = localStorage.getItem("token");
+      // Send history so the AI has context of previous messages
       const res = await axios.post(`${API_URL}/links/chat`, 
-        { question: userMessage },
+        { 
+          question: userMessage,
+          history: messages.map(m => ({ role: m.role, text: m.text }))
+        },
         { headers: { "x-auth-token": token } }
       );
       setMessages(prev => [...prev, { role: "bot", text: res.data.answer }]);
@@ -79,8 +84,8 @@ export default function ChatWidget() {
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === "bot" ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}>
                       {msg.role === "bot" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
                     </div>
-                    <div className={`p-3 rounded-2xl text-xs leading-relaxed ${msg.role === "bot" ? "bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200" : "bg-indigo-600 text-white shadow-md shadow-indigo-500/10"}`}>
-                      {msg.text}
+                    <div className={`p-3 rounded-2xl text-xs leading-relaxed whitespace-pre-wrap prose prose-xs prose-indigo dark:prose-invert max-w-none ${msg.role === "bot" ? "bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200" : "bg-indigo-600 text-white shadow-md shadow-indigo-500/10"}`}>
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
                     </div>
                   </div>
                 </div>

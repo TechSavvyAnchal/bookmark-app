@@ -248,24 +248,81 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
   };
 };
 
-const chatWithBookmarks = async (question, bookmarks) => {
+const chatWithBookmarks = async (question, bookmarks, history = []) => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-  const chatModels = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.0-flash"];
+  // Using the latest available models from the list-models output
+  const chatModels = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
 
-  const context = bookmarks.map(b => `- ${b.title}: ${b.summary}`).join("\n");
-  const prompt = `Question: ${question}\n\nContext:\n${context}`;
+  const context = bookmarks.length > 0 
+    ? bookmarks.map(b => `- [${b.title}] (${b.url}): ${b.summary}${b.tags ? ' | Tags: ' + b.tags.join(', ') : ''}${b.note ? ' | Note: ' + b.note : ''}`).join("\n")
+    : "No specific bookmarks found for this query.";
+
+  const systemPrompt = `You are the AI Assistant for "Ask My Bookmarks", a smart bookmarking app. 
+Your goal is to help users find information within their saved links and answer questions about the app.
+
+APP FEATURES:
+- Adding Links: Users can add URLs to save them. The app automatically generates summaries, tags, and categories.
+- Vaults: Users can create private or shared vaults to organize bookmarks with others.
+- AI Search: Users can search bookmarks using natural language (semantic search).
+- Reader Mode: Clean, distraction-free reading for saved links.
+- Quizzes: The app can generate comprehension quizzes for any saved link.
+- Weekly Digest: Users receive a weekly email summary of their saved content.
+- Browser Extension: A companion extension for quick saving.
+
+GUIDELINES:
+1. If the user's question is about their bookmarks, use the provided CONTEXT.
+2. If the user asks how to use the app or about its features, use the APP FEATURES list.
+3. If the answer is not in the context or features, look for general knowledge but mention if you couldn't find a specific bookmark match.
+4. Be concise, professional, and helpful.
+5. If the user asks general questions (e.g., "How are you?"), answer them directly.
+6. Use the CONVERSATION HISTORY to maintain context for follow-up questions.
+- When referencing a bookmark, mention its title and you can even provide the URL if helpful.
+
+FORMATTING:
+- Use standard Markdown for bolding (**text**).
+- ALWAYS ensure a space exists before and after bolded segments (e.g., "Check out **React** for more info").
+- Use bullet points and double line breaks between paragraphs to ensure high readability.
+- NEVER clump bolded words together without spaces.
+- Do not use excessive bolding; highlight only the most important names, titles, or keywords.
+- Use a professional, clean layout with appropriate white space.
+
+CONTEXT FROM USER'S BOOKMARKS:
+${context}
+
+CONVERSATION HISTORY:
+${history.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n')}
+User: ${question}
+Assistant:`;
 
   for (const modelName of chatModels) {
     try {
       console.log(`[AI SERVICE] Attempting chat with model: ${modelName}`);
       const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent(systemPrompt);
       return result.response.text();
     } catch (err) {
       console.error(`[AI SERVICE] Chat with ${modelName} failed:`, err.message);
-      // If this is the last model in our list, throw the error
-      if (modelName === chatModels[chatModels.length - 1]) throw err;
-      // Otherwise, log it and try the next one
+      if (modelName === chatModels[chatModels.length - 1]) {
+         // If all Gemini models fail, try OpenAI if available
+         if (process.env.OPENAI_API_KEY) {
+           try {
+             console.log("[AI SERVICE] Falling back to OpenAI for chat...");
+             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY.trim() });
+             const completion = await openai.chat.completions.create({
+               model: "gpt-4o-mini",
+               messages: [
+                 { role: "system", content: "You are the AI Assistant for 'Ask My Bookmarks'." },
+                 ...history.map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text })),
+                 { role: "user", content: `Context: ${context}\n\nQuestion: ${question}` }
+               ]
+             });
+             return completion.choices[0].message.content;
+           } catch (openaiErr) {
+             console.error("[AI SERVICE] OpenAI fallback failed:", openaiErr.message);
+           }
+         }
+         throw err;
+      }
       console.log(`[AI SERVICE] Retrying with fallback model...`);
     }
   }
