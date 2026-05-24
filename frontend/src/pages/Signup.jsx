@@ -152,7 +152,7 @@ export default function Signup() {
         <motion.div variants={itemVariants} className="mt-6 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-white/50 my-2">
             <div className="flex-1 h-px bg-white/20"></div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Or continue with</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Or sign up with</span>
             <div className="flex-1 h-px bg-white/20"></div>
           </div>
           
