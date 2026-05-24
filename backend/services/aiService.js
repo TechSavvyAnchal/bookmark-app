@@ -248,7 +248,7 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
   };
 };
 
-const chatWithBookmarks = async (question, bookmarks, history = []) => {
+const chatWithBookmarks = async (question, bookmarks, history = [], totalCount = 0) => {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
   // Using the latest available models from the list-models output
   const chatModels = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
@@ -260,6 +260,9 @@ const chatWithBookmarks = async (question, bookmarks, history = []) => {
   const systemPrompt = `You are the AI Assistant for "Ask My Bookmarks", a smart bookmarking app. 
 Your goal is to help users find information within their saved links and answer questions about the app.
 
+LIBRARY METADATA:
+- Total Bookmarks Saved: ${totalCount}
+
 APP FEATURES:
 - Adding Links: Users can add URLs to save them. The app automatically generates summaries, tags, and categories.
 - Vaults: Users can create private or shared vaults to organize bookmarks with others.
@@ -270,12 +273,13 @@ APP FEATURES:
 - Browser Extension: A companion extension for quick saving.
 
 GUIDELINES:
-1. If the user's question is about their bookmarks, use the provided CONTEXT.
-2. If the user asks how to use the app or about its features, use the APP FEATURES list.
-3. If the answer is not in the context or features, look for general knowledge but mention if you couldn't find a specific bookmark match.
-4. Be concise, professional, and helpful.
-5. If the user asks general questions (e.g., "How are you?"), answer them directly.
-6. Use the CONVERSATION HISTORY to maintain context for follow-up questions.
+1. If the user asks how many links or bookmarks they have, use the Total Bookmarks Saved from LIBRARY METADATA.
+2. If the user's question is about their bookmarks, use the provided CONTEXT.
+3. If the user asks how to use the app or about its features, use the APP FEATURES list.
+4. If the answer is not in the context or features, look for general knowledge but mention if you couldn't find a specific bookmark match.
+5. Be concise, professional, and helpful.
+6. If the user asks general questions (e.g., "How are you?"), answer them directly.
+7. Use the CONVERSATION HISTORY to maintain context for follow-up questions.
 - When referencing a bookmark, mention its title and you can even provide the URL if helpful.
 
 FORMATTING:

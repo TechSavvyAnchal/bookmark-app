@@ -54,6 +54,16 @@ async function runTest() {
     );
     console.log("AI Response 3:", response3);
 
+    // Test 4: Quantitative question (Total count)
+    console.log("\n[Test 4] Asking: 'How many links do I have saved?'");
+    const response4 = await chatWithBookmarks(
+      "How many links do I have saved?",
+      mockBookmarks,
+      [],
+      4 // Passing total count as 4
+    );
+    console.log("AI Response 4:", response4);
+
     console.log("\n--- TEST COMPLETE ---");
   } catch (err) {
     console.error("Test failed:", err);

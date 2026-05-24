@@ -79,7 +79,10 @@ router.post("/chat", auth, async (req, res) => {
       }
     }
 
-    const answer = await chatWithBookmarks(question, relevantLinks, history || []);
+    // Get total count for the user to help AI answer quantitative questions
+    const totalCount = await Link.countDocuments({ user: req.user.id });
+
+    const answer = await chatWithBookmarks(question, relevantLinks, history || [], totalCount);
     res.send({ answer });
 
   } catch (err) {
