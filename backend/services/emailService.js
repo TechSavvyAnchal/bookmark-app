@@ -4,13 +4,17 @@ const User = require("../models/User");
 
 // Create a transporter (using placeholders - in a real app, use .env)
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.ethereal.email",
-  port: process.env.EMAIL_PORT || 587,
+  host: process.env.EMAIL_HOST,
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: process.env.EMAIL_PORT == 465, // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_USER || "placeholder@ethereal.email",
-    pass: process.env.EMAIL_PASS || "password123",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
+
+const APP_NAME = "Ask My Bookmarks";
+const SENDER_EMAIL = `"${APP_NAME}" <${process.env.EMAIL_USER}>`;
 
 const sendWeeklyDigest = async (user) => {
   try {
@@ -70,7 +74,7 @@ const sendWeeklyDigest = async (user) => {
     `;
 
     await transporter.sendMail({
-      from: `"AI Bookmarks" <${process.env.EMAIL_USER}>`,
+      from: SENDER_EMAIL,
       to: user.email,
       subject: "Your Weekly Knowledge Digest 📚",
       html: emailHtml,
@@ -110,7 +114,7 @@ const sendVaultInvitation = async (toEmail, inviterName, vaultName) => {
 
   try {
     await transporter.sendMail({
-      from: `"AI Bookmarking App" <${process.env.EMAIL_USER}>`,
+      from: SENDER_EMAIL,
       to: toEmail,
       subject: `Invitation to collaborate on "${vaultName}" 📚`,
       html: emailHtml,
@@ -138,7 +142,7 @@ const sendOTPEmail = async (toEmail, otp) => {
     `;
 
     await transporter.sendMail({
-      from: `"AI Bookmarks" <${process.env.EMAIL_USER}>`,
+      from: SENDER_EMAIL,
       to: toEmail,
       subject: `${otp} is your verification code`,
       html: emailHtml,
