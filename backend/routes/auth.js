@@ -15,13 +15,20 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 // Helper for ReCAPTCHA
 const verifyCaptcha = async (token) => {
-  if (!token) return false;
+  if (!token) {
+    console.warn("[AUTH] No reCAPTCHA token provided");
+    return false;
+  }
   try {
     const res = await axios.post(
       `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`
     );
+    if (!res.data.success) {
+      console.warn("[AUTH] reCAPTCHA verification failed:", res.data["error-codes"]);
+    }
     return res.data.success;
   } catch (err) {
+    console.error("[AUTH] reCAPTCHA request error:", err.message);
     return false;
   }
 };

@@ -30,9 +30,9 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageWrapper><Login /></PageWrapper>} />
-        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+        <Route path="/" element={<PageWrapper><Signup /></PageWrapper>} />
         <Route path="/signup" element={<PageWrapper><Signup /></PageWrapper>} />
+        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/verify-otp" element={<PageWrapper><VerifyOTP /></PageWrapper>} />
         
         {/* Protected Routes inside Layout */}
@@ -44,7 +44,7 @@ function AnimatedRoutes() {
           <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
         </Route>
 
-        {/* Catch all - redirect to login or dashboard depending on auth */}
+        {/* Catch all - redirect to signup or dashboard depending on auth */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

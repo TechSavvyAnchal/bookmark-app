@@ -157,7 +157,7 @@ export default function Login() {
         <motion.div variants={itemVariants} className="mt-8 pt-6 border-t border-white/10 text-center">
           <p className="text-white/70 text-sm">
             Don't have an account?{" "}
-            <Link to="/signup" className="text-white font-bold hover:underline inline-flex items-center gap-1">
+            <Link to="/" className="text-white font-bold hover:underline inline-flex items-center gap-1">
               Sign Up <ArrowRight className="w-4 h-4" />
             </Link>
           </p>
