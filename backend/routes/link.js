@@ -129,10 +129,14 @@ router.post("/", auth, validate(createLinkSchema), async (req, res) => {
     // Emit 'create' event via Socket.io
     const io = req.app.get("io");
     if (io) {
+      const userId = req.user.id.toString();
       if (link.vault) {
-        io.to(`vault_${link.vault}`).emit("linkUpdate", { action: "create", link });
+        const vaultId = link.vault.toString();
+        console.log(`[SOCKET] Emitting create to vault_${vaultId}`);
+        io.to(`vault_${vaultId}`).emit("linkUpdate", { action: "create", link });
       } else {
-        io.to(`user_${req.user.id}`).emit("linkUpdate", { action: "create", link });
+        console.log(`[SOCKET] Emitting create to user_${userId}`);
+        io.to(`user_${userId}`).emit("linkUpdate", { action: "create", link });
       }
     }
 
@@ -151,10 +155,14 @@ router.post("/", auth, validate(createLinkSchema), async (req, res) => {
         // 4. Emit update via Socket.io so the frontend updates automatically
         const io = req.app.get("io");
         if (io) {
+          const userId = req.user.id.toString();
           if (updatedLink.vault) {
-            io.to(`vault_${updatedLink.vault}`).emit("linkUpdate", { action: "update", link: updatedLink });
+            const vaultId = updatedLink.vault.toString();
+            console.log(`[SOCKET] Emitting update to vault_${vaultId}`);
+            io.to(`vault_${vaultId}`).emit("linkUpdate", { action: "update", link: updatedLink });
           } else {
-            io.to(`user_${req.user.id}`).emit("linkUpdate", { action: "update", link: updatedLink });
+            console.log(`[SOCKET] Emitting update to user_${userId}`);
+            io.to(`user_${userId}`).emit("linkUpdate", { action: "update", link: updatedLink });
           }
         }
         console.log(`[LINK] Background AI analysis complete for: ${link._id}`);

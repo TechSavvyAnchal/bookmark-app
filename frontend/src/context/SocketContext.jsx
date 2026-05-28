@@ -9,28 +9,57 @@ export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const location = useLocation();
+  const [token, setToken] = useState(localStorage.getItem("token"));
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    // Sync token state with localStorage periodically or on events
+    const checkToken = () => {
+      const currentToken = localStorage.getItem("token");
+      if (currentToken !== token) {
+        setToken(currentToken);
+      }
+    };
     
-    if (token && (!socket || socket.auth?.token !== token)) {
-      if (socket) socket.close();
+    const interval = setInterval(checkToken, 2000);
+    return () => clearInterval(interval);
+  }, [token]);
 
+  useEffect(() => {
+    if (token) {
+      if (socket) {
+        if (socket.auth?.token === token && socket.connected) return;
+        socket.close();
+      }
+
+      console.log("[SOCKET] Initializing connection...");
       const newSocket = io(API_URL.replace("/api", ""), {
-        auth: { token }
+        auth: { token },
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: 5
       });
 
       newSocket.on("connect", () => {
-        console.log("[SOCKET] Connected to server");
+        console.log("[SOCKET] Connected successfully");
+      });
+
+      newSocket.on("connect_error", (err) => {
+        console.error("[SOCKET] Connection error:", err.message);
       });
 
       setSocket(newSocket);
-    } else if (!token && socket) {
-      socket.close();
-      setSocket(null);
+
+      return () => {
+        console.log("[SOCKET] Cleaning up connection...");
+        newSocket.close();
+      };
+    } else {
+      if (socket) {
+        socket.close();
+        setSocket(null);
+      }
     }
-  }, [location.pathname]);
+  }, [token]);
 
   return (
     <SocketContext.Provider value={socket}>

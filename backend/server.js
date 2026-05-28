@@ -34,24 +34,27 @@ io.use((socket, next) => {
 });
 
 io.on("connection", async (socket) => {
-  console.log(`[SOCKET] User connected: ${socket.user.id}`);
+  const userId = socket.user.id.toString();
+  console.log(`[SOCKET] User connected: ${userId}`);
   
   // Join personal room
-  socket.join(`user_${socket.user.id}`);
+  socket.join(`user_${userId}`);
+  console.log(`[SOCKET] User joined personal room: user_${userId}`);
   
   // Join rooms for each vault the user is a member of
   try {
     const userVaults = await Vault.find({ members: socket.user.id });
     userVaults.forEach(vault => {
-      socket.join(`vault_${vault._id}`);
-      console.log(`[SOCKET] User ${socket.user.id} joined vault room: ${vault._id}`);
+      const vaultId = vault._id.toString();
+      socket.join(`vault_${vaultId}`);
+      console.log(`[SOCKET] User ${userId} joined vault room: ${vaultId}`);
     });
   } catch (err) {
     console.error("[SOCKET] Error joining vault rooms:", err);
   }
 
   socket.on("disconnect", () => {
-    console.log(`[SOCKET] User disconnected: ${socket.user.id}`);
+    console.log(`[SOCKET] User disconnected: ${userId}`);
   });
 });
 
