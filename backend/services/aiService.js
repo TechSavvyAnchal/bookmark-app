@@ -177,34 +177,29 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
 
   JSON:`;
 
-  // 1. PRIORITIZE OPENAI IF KEY EXISTS (Much more stable)
+  let analysis = null;
+
+  // 1. TRY OPENAI (GPT-4o-mini)
   if (process.env.OPENAI_API_KEY) {
     try {
-      console.log("[AI SERVICE] Attempting OpenAI (GPT-4o-mini)...");
+      console.log("[AI SERVICE] Attempting OpenAI...");
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY.trim() });
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
-        timeout: 10000 // 10 second timeout
+        timeout: 10000 
       });
 
-      const aiResponse = JSON.parse(completion.choices[0].message.content);
+      analysis = JSON.parse(completion.choices[0].message.content);
       console.log("[AI SERVICE] OpenAI analysis successful!");
-      return { 
-        summary: aiResponse.summary || "No summary provided.", 
-        category: manualCategory || aiResponse.category || "General", 
-        tags: aiResponse.tags || [], 
-        readTime: parseInt(aiResponse.readTime) || 2, 
-        embedding: [] 
-      };
     } catch (err) {
       console.error("[AI SERVICE] OpenAI failed:", err.message);
     }
   }
 
   // 2. FALLBACK TO GEMINI
-  if (process.env.GEMINI_API_KEY) {
+  if (!analysis && process.env.GEMINI_API_KEY) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
     const modelsToTry = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.0-flash"];
 
@@ -216,35 +211,40 @@ const analyzeLink = async (url, title, manualCategory = null, note = "") => {
         const text = result.response.text().trim();
         const start = text.indexOf("{");
         const end = text.lastIndexOf("}");
-        
-        const aiResponse = JSON.parse(text.substring(start, end + 1));
+        analysis = JSON.parse(text.substring(start, end + 1));
         console.log(`[AI SERVICE] Gemini ${modelName} successful!`);
-        
-        let embedding = [];
-        try {
-           embedding = await generateEmbedding(`Title: ${title} | Summary: ${aiResponse.summary}`);
-        } catch (e) {}
-
-        return { 
-          summary: aiResponse.summary || "No summary", 
-          category: manualCategory || aiResponse.category || "General", 
-          tags: aiResponse.tags || [], 
-          readTime: parseInt(aiResponse.readTime) || 2, 
-          embedding 
-        };
+        break;
       } catch (err) {
         console.error(`[AI SERVICE] Gemini ${modelName} failed:`, err.message);
       }
     }
   }
 
-  console.error("[AI SERVICE] All AI models failed or no keys found.");
+  // 3. IF NO AI WORKED
+  if (!analysis) {
+    analysis = {
+      summary: "AI analysis failed. Please check your API keys.",
+      category: "General",
+      tags: [],
+      readTime: 2
+    };
+  }
+
+  // 4. ALWAYS GENERATE EMBEDDING FOR SEMANTIC SEARCH
+  let embedding = [];
+  try {
+    const embeddingText = `Title: ${title || metadata.pageTitle} | Summary: ${analysis.summary} | Tags: ${analysis.tags?.join(", ")}`;
+    embedding = await generateEmbedding(embeddingText);
+  } catch (e) {
+    console.error("[AI SERVICE] Embedding generation failed:", e.message);
+  }
+
   return { 
-    summary: "AI analysis failed. Please check your API keys in Render settings.", 
-    category: manualCategory || "General", 
-    tags: [], 
-    readTime: 2, 
-    embedding: [] 
+    summary: analysis.summary, 
+    category: manualCategory || analysis.category, 
+    tags: analysis.tags || [], 
+    readTime: parseInt(analysis.readTime) || 2, 
+    embedding 
   };
 };
 
