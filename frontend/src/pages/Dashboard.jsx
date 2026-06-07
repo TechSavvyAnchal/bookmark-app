@@ -248,7 +248,9 @@ function Dashboard() {
     .filter(b => {
       if (!b) return false;
       const s = search.toLowerCase();
-      const matchesSearch = !search || 
+      
+      // If using AI semantic search, we trust the server results and only apply category/pinned filters
+      const matchesSearch = isSemantic || !search || 
         (b.title || "").toLowerCase().includes(s) || 
         (b.summary || "").toLowerCase().includes(s) ||
         (b.tags || []).some(t => (t || "").toLowerCase().includes(s));
