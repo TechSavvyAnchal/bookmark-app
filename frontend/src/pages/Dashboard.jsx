@@ -79,27 +79,47 @@ function Dashboard() {
 
   useEffect(() => {
     if (socket) {
+      console.log("[DASHBOARD] Socket available, status:", socket.connected ? "Connected" : "Disconnected");
+      
       socket.on("linkUpdate", (data) => {
-        console.log("[SOCKET] Received link update:", data);
+        console.log("[DASHBOARD] Received linkUpdate event:", data);
         if (data.action === "create") {
+          console.log("[DASHBOARD] Handling 'create' action for link:", data.link?._id);
           setBookmarks(prev => {
-            if (prev.find(b => b._id === data.link._id)) return prev;
+            const alreadyExists = prev.find(b => b._id === data.link._id);
+            if (alreadyExists) {
+              console.log("[DASHBOARD] Link already exists in state, skipping add.");
+              return prev;
+            }
             return [data.link, ...prev];
           });
         } else if (data.action === "delete") {
+          console.log("[DASHBOARD] Handling 'delete' action for linkId:", data.linkId);
           setBookmarks(prev => prev.filter(b => b._id !== data.linkId));
         } else if (data.action === "update") {
+          console.log("[DASHBOARD] Handling 'update' action for link:", data.link?._id);
           setBookmarks(prev => {
             const exists = prev.find(b => b._id === data.link._id);
             if (exists) {
               return prev.map(b => b._id === data.link._id ? data.link : b);
             }
+            console.log("[DASHBOARD] Updated link not found in current state, adding it to the top.");
             return [data.link, ...prev];
           });
         }
       });
 
-      return () => socket.off("linkUpdate");
+      // Log any generic socket events for debugging
+      socket.onAny((eventName, ...args) => {
+        console.log(`[DASHBOARD] [DEBUG] Received event: ${eventName}`, args);
+      });
+
+      return () => {
+        console.log("[DASHBOARD] Removing socket listeners");
+        socket.off("linkUpdate");
+      };
+    } else {
+      console.log("[DASHBOARD] Socket not available yet.");
     }
   }, [socket]);
 
