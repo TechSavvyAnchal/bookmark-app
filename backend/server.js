@@ -76,6 +76,8 @@ app.use(express.json());
 
 // Simple request logger for production
 app.use((req, res, next) => {
+  // Skip logging for health checks and favicons to keep logs clean (especially for UptimeRobot)
+  if (req.url === "/health" || req.url === "/favicon.ico") return next();
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
@@ -98,6 +100,11 @@ try {
 app.use("/auth", require("./routes/auth"));
 app.use("/links", require("./routes/link"));
 app.use("/vaults", require("./routes/vault"));
+
+// Health check route for UptimeRobot
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
 
 // Test route
 app.get("/", (req, res) => {
