@@ -319,7 +319,12 @@ router.post("/search", auth, async (req, res) => {
   const { query } = req.body;
   if (!query) return res.send([]);
 
+  console.log(`[SEARCH] Query: "${query}" for user: ${req.user.id}`);
+
   const performFallbackSearch = async () => {
+    // ... rest of the function remains the same but add a log
+    console.log(`[SEARCH] Falling back to keyword search for: "${query}"`);
+    // ...
     console.log(`[SEARCH] Performing human-language keyword search for: "${query}"`);
     
     // 1. Natural Language Processing: Filter stop words
