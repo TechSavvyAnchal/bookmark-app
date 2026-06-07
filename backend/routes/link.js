@@ -46,10 +46,10 @@ router.post("/chat", auth, async (req, res) => {
       relevantLinks = await performKeywordRetrieval(question);
     } else {
       // 2. Retrieve top relevant links using vector search (RAG)
-      const userVaults = await Vault.find({ members: req.user.id });
-      const vaultIds = userVaults.map(v => v._id);
-
       try {
+        const userVaults = await Vault.find({ members: req.user.id });
+        const vaultIds = userVaults.map(v => v._id);
+
         relevantLinks = await Link.aggregate([
           {
             $vectorSearch: {
@@ -63,7 +63,7 @@ router.post("/chat", auth, async (req, res) => {
           {
             $match: {
               $or: [
-                { user: new mongoose.Types.ObjectId(req.user.id) },
+                { user: new mongoose.Types.ObjectId(String(req.user.id)) },
                 { vault: { $in: vaultIds } }
               ]
             }
@@ -415,7 +415,7 @@ router.post("/search", auth, async (req, res) => {
         {
           $match: {
             $or: [
-              { user: new mongoose.Types.ObjectId(req.user.id) },
+              { user: new mongoose.Types.ObjectId(String(req.user.id)) },
               { vault: { $in: vaultIds } }
             ]
           }
