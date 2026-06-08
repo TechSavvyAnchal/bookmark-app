@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Shield, ShieldAlert, LogOut, Key, CheckCircle2, AlertTriangle, Zap } from "lucide-react";
+import { Shield, ShieldAlert, LogOut, Key, CheckCircle2, AlertTriangle, Zap, Volume2, Play } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
@@ -9,7 +9,40 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [profileData, setProfileData] = useState({ name: "", password: "" });
+  const [voices, setVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem("preferredVoice") || "");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  const handleVoiceChange = (e) => {
+    const voiceName = e.target.value;
+    setSelectedVoice(voiceName);
+    localStorage.setItem("preferredVoice", voiceName);
+    toast.success("Voice preference saved!");
+  };
+
+  const testVoice = () => {
+    if (!selectedVoice) {
+      toast.error("Please select a voice first");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance("Hello! This is how your links will sound.");
+    const voice = voices.find(v => v.name === selectedVoice);
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -131,6 +164,57 @@ const Settings = () => {
               </button>
             </div>
           </form>
+        </motion.div>
+
+        {/* Voice Settings Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.08 }}
+          className="bg-white dark:bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl shadow-indigo-500/5"
+        >
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl text-indigo-600">
+              <Volume2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Voice Settings</h3>
+              <p className="text-slate-500 text-sm">Choose how your link summaries are read.</p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 items-end">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Select TTS Voice</label>
+              <select
+                value={selectedVoice}
+                onChange={handleVoiceChange}
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white cursor-pointer"
+              >
+                <option value="">Default System Voice</option>
+                {voices.map((voice) => (
+                  <option key={voice.name} value={voice.name}>
+                    {voice.name} ({voice.lang})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={testVoice}
+              className="w-full py-4 bg-white dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl border border-indigo-100 dark:border-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Play className="w-4 h-4" />
+              Test Voice
+            </button>
+          </div>
+          
+          <div className="mt-4 flex items-start gap-2 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-500/10">
+            <AlertTriangle className="w-4 h-4 text-blue-500 mt-0.5" />
+            <p className="text-[11px] text-blue-600 dark:text-blue-400 leading-relaxed font-medium">
+              Tip: For a more "human" feel, try voices that include "Google", "Natural", or "Premium" in their names. These are often much higher quality than default system voices.
+            </p>
+          </div>
         </motion.div>
 
         {/* Revoke Sessions Card */}

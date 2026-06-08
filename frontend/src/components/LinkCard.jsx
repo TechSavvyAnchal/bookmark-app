@@ -123,6 +123,21 @@ export default function LinkCard({ bookmark, onDelete, onUpdate, viewMode = "gri
     window.dispatchEvent(new CustomEvent("stop-all-speech"));
 
     const utterance = new SpeechSynthesisUtterance(bookmark.summary);
+    
+    // Apply preferred voice if selected
+    const preferredVoiceName = localStorage.getItem("preferredVoice");
+    if (preferredVoiceName) {
+      const voices = window.speechSynthesis.getVoices();
+      const voice = voices.find(v => v.name === preferredVoiceName);
+      if (voice) {
+        utterance.voice = voice;
+      }
+    }
+
+    // Add some natural variation
+    utterance.pitch = 1.0;
+    utterance.rate = 1.0;
+    
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     
