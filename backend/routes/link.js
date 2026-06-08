@@ -446,20 +446,44 @@ router.post("/search", auth, async (req, res) => {
 
 router.get("/spark", auth, async (req, res) => {
   try {
-    const links = await Link.find({ user: req.user.id });
-    if (links.length === 0) return res.status(404).send("No links found");
-    res.send(links[Math.floor(Math.random() * links.length)]);
-  } catch (err) { res.status(500).send("Error"); }
+    // Optimization: Use $sample to pick one random link without fetching all of them
+    const links = await Link.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(String(req.user.id)) } },
+      { $sample: { size: 1 } },
+      { $project: { embedding: 0 } } // Exclude large embedding field
+    ]);
+
+    if (!links || links.length === 0) return res.status(404).send("No links found");
+    res.send(links[0]);
+  } catch (err) { 
+    console.error("Spark error:", err.message);
+    res.status(500).send("Error"); 
+  }
 });
 
 router.get("/", auth, async (req, res) => {
   try {
-    const personalLinks = await Link.find({ user: req.user.id });
-    const userVaults = await Vault.find({ members: req.user.id });
-    const vaultLinks = await Link.find({ vault: { $in: userVaults.map(v => v._id) } });
-    const uniqueLinks = Array.from(new Map([...personalLinks, ...vaultLinks].map(l => [l._id.toString(), l])).values());
-    res.send(uniqueLinks);
-  } catch (err) { res.status(500).send("Error"); }
+    const userId = new mongoose.Types.ObjectId(String(req.user.id));
+    
+    // Get all vaults user is a member of
+    const userVaults = await Vault.find({ members: req.user.id }).select("_id");
+    const vaultIds = userVaults.map(v => v._id);
+
+    // Optimization: Single query to find personal OR vault links, and exclude embedding
+    const links = await Link.find({
+      $or: [
+        { user: userId },
+        { vault: { $in: vaultIds } }
+      ]
+    })
+    .select("-embedding") // EXTREMELY IMPORTANT: Do not fetch/send large embeddings for the list
+    .sort({ createdAt: -1 });
+
+    res.send(links);
+  } catch (err) { 
+    console.error("Get links error:", err.message);
+    res.status(500).send("Error"); 
+  }
 });
 
 router.get("/:id/read", auth, async (req, res) => {

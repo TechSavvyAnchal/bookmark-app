@@ -149,15 +149,25 @@ function Dashboard() {
       if (!token) return;
 
       setLoading(true);
-      try {
-        const sparkRes = await api.get(`/links/spark`);
-        setSparkLink(sparkRes.data);
-      } catch (e) { }
       
+      // Optimization: Fetch Spark and Bookmarks in parallel instead of sequentially
       try {
-        await fetchBookmarks();
+        const [sparkRes, linksRes] = await Promise.all([
+          api.get(`/links/spark`).catch(e => {
+            console.warn("Spark fetch failed:", e.message);
+            return { data: null };
+          }),
+          api.get(`/links`).catch(e => {
+            console.error("Main fetch failed:", e.message);
+            toast.error("Failed to load bookmarks.");
+            return { data: [] };
+          })
+        ]);
+
+        setSparkLink(sparkRes.data);
+        setBookmarks(Array.isArray(linksRes.data) ? linksRes.data : []);
       } catch (e) {
-        console.error("Main fetch failed:", e.message);
+        console.error("Initialization failed:", e.message);
       } finally {
         setLoading(false);
       }
