@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 const APP_NAME = "Ask My Bookmarks";
 const SENDER_EMAIL = `"${APP_NAME}" <${process.env.EMAIL_USER}>`;
 
-const sendWeeklyDigest = async (user) => {
+const sendWeeklyDigest = async (user, brief) => {
   try {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -38,7 +38,7 @@ const sendWeeklyDigest = async (user) => {
       ? oldLinks[Math.floor(Math.random() * oldLinks.length)] 
       : null;
 
-    if (recentLinks.length === 0 && !forgottenGem) return;
+    if (recentLinks.length === 0 && !forgottenGem && !brief) return;
 
     console.log(`Generating weekly digest for ${user.email}...`);
 
@@ -47,6 +47,13 @@ const sendWeeklyDigest = async (user) => {
         <h1 style="color: #4f46e5; text-align: center;">Weekly Digest 📚</h1>
         <p>Hi ${user.name}, here's your weekly summary from AI Bookmarks.</p>
         
+        ${brief ? `
+          <div style="background: #eef2ff; padding: 20px; border-radius: 12px; margin: 20px 0; border: 1px solid #c7d2fe;">
+            <h2 style="color: #4338ca; margin-top: 0; font-size: 18px;">🤖 Weekly Intelligence Brief</h2>
+            <p style="color: #3730a3; font-style: italic; line-height: 1.6; margin-bottom: 0;">"${brief}"</p>
+          </div>
+        ` : ''}
+
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         
         <h2 style="color: #1f2937;">✨ Top 3 New Bookmarks</h2>
