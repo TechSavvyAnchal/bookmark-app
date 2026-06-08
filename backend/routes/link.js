@@ -255,7 +255,7 @@ router.put("/:id", auth, validate(updateLinkSchema), async (req, res) => {
   }
 });
 
-// ANALYTICS (with Redis Caching)
+// ANALYTICS (with Redis Caching & MongoDB Aggregation Optimization)
 router.get("/analytics", auth, async (req, res) => {
   try {
     const cacheKey = `analytics:${req.user.id}`;
@@ -266,34 +266,78 @@ router.get("/analytics", auth, async (req, res) => {
       }
     } catch (e) {}
 
-    const personalLinks = await Link.find({ user: req.user.id });
-    const userVaults = await Vault.find({ members: req.user.id });
+    const userId = new mongoose.Types.ObjectId(String(req.user.id));
+    const userVaults = await Vault.find({ members: req.user.id }).select("_id");
     const vaultIds = userVaults.map(v => v._id);
-    const vaultLinks = await Link.find({ vault: { $in: vaultIds } });
-    const allLinks = [...personalLinks, ...vaultLinks];
-    const links = Array.from(new Map(allLinks.map(l => [l._id.toString(), l])).values());
 
-    const tagCount = {};
-    const categoryCount = {};
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // Optimized Aggregation Pipeline
+    const stats = await Link.aggregate([
+      {
+        $match: {
+          $or: [
+            { user: userId },
+            { vault: { $in: vaultIds } }
+          ]
+        }
+      },
+      {
+        $facet: {
+          total: [{ $count: "count" }],
+          categories: [
+            { $match: { category: { $ne: null } } },
+            { $group: { _id: "$category", count: { $sum: 1 } } }
+          ],
+          tags: [
+            { $unwind: "$tags" },
+            { $group: { _id: "$tags", count: { $sum: 1 } } }
+          ],
+          weeklyActivity: [
+            { $match: { createdAt: { $gte: sevenDaysAgo } } },
+            {
+              $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                count: { $sum: 1 }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ]
+        }
+      }
+    ]);
+
+    const result = stats[0];
+
+    // Post-process to ensure 7 days of activity (even with 0 counts)
     const activityMap = {};
-
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       activityMap[d.toISOString().split('T')[0]] = 0;
     }
 
-    links.forEach(l => {
-      if (l.tags) l.tags.forEach(t => tagCount[t] = (tagCount[t] || 0) + 1);
-      if (l.category) categoryCount[l.category] = (categoryCount[l.category] || 0) + 1;
-      if (l.createdAt) {
-        const dateStr = new Date(l.createdAt).toISOString().split('T')[0];
-        if (activityMap.hasOwnProperty(dateStr)) activityMap[dateStr]++;
-      }
-    });
+    if (result.weeklyActivity) {
+      result.weeklyActivity.forEach(item => {
+        if (activityMap.hasOwnProperty(item._id)) {
+          activityMap[item._id] = item.count;
+        }
+      });
+    }
+
+    const tagCount = {};
+    if (result.tags) {
+      result.tags.forEach(t => tagCount[t._id] = t.count);
+    }
+
+    const categoryCount = {};
+    if (result.categories) {
+      result.categories.forEach(c => categoryCount[c._id] = c.count);
+    }
 
     const analyticsData = {
-      total: links.length,
+      total: result.total[0]?.count || 0,
       tagCount,
       categoryCount,
       weeklyActivity: Object.entries(activityMap).map(([date, count]) => ({
@@ -310,6 +354,7 @@ router.get("/analytics", auth, async (req, res) => {
 
     res.send(analyticsData);
   } catch (err) {
+    console.error("Analytics error:", err.message);
     res.status(500).send("Analytics failed");
   }
 });
